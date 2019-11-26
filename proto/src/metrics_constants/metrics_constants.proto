@@ -7448,5 +7448,10 @@ message MetricsEvent {
 
     // OPEN: Settings > Security > More security settings > App lock
     APP_LOCK = 1938;
+
+    // OPEN: QS Data switch tile shown
+    // ACTION: QS Data switch tile tapped
+    // CATEGORY: QUICK_SETTINGS
+    QS_DATA_SWITCH = 1939;
   }
 }

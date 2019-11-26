@@ -42,4 +42,7 @@
 
     <!-- Face unlock -->
     <string name="face_unlock_recognizing">Recognizing face...</string>
+
+    <!-- Data switch tile -->
+    <string name="qs_data_switch_label">Mobile data preference</string>
 </resources>
