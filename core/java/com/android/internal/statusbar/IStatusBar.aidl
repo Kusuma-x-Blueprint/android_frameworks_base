@@ -350,4 +350,7 @@ oneway interface IStatusBar
      * Triggers custom gesture actions.
      */
     void onCustomGestureAction(String action);
+
+    void screenPinningStateChanged(boolean enabled);
+    void leftInLandscapeChanged(boolean isLeft);
 }
