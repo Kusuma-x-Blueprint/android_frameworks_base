@@ -132,6 +132,8 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private static final VibrationAttributes HARDWARE_FEEDBACK_VIBRATION_ATTRIBUTES =
             VibrationAttributes.createForUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK);
 
+    private static Toast mSilenceToast;
+
     @Inject
     CentralSurfacesCommandQueueCallbacks(
             CentralSurfaces centralSurfaces,
@@ -650,36 +652,40 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
                 mWindowManagerService.requestSystemScreenshot();
             } catch (RemoteException e) {}
         } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE.equals(actionType)) {
+            int toastText = 0;
             if (CUSTOM_GESTURE_ACTION_RINGER_MODE_NORMAL.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_NORMAL);
                 mVibratorHelper.vibrate(VibrationEffect.EFFECT_HEAVY_CLICK);
-                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_normal, Toast.LENGTH_SHORT).show();
+                toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_normal;
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_VIBRATE.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_VIBRATE);
                 mVibratorHelper.vibrate(VibrationEffect.EFFECT_DOUBLE_CLICK);
-                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate, Toast.LENGTH_SHORT).show();
+                toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate;
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_SILENT.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
-                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_silent, Toast.LENGTH_SHORT).show();
+                toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_silent;
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_CYCLE.equals(actionParams)) {
                 int ringerMode = mAudioManager.getRingerMode();
                 switch (ringerMode) {
                     case AudioManager.RINGER_MODE_NORMAL:
                         mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_VIBRATE);
                         mVibratorHelper.vibrate(VibrationEffect.EFFECT_DOUBLE_CLICK);
-                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate, Toast.LENGTH_SHORT).show();
+                        toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate;
                         break;
                     case AudioManager.RINGER_MODE_VIBRATE:
                         mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
-                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_silent, Toast.LENGTH_SHORT).show();
+                        toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_silent;
                         break;
                     case AudioManager.RINGER_MODE_SILENT:
                         mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_NORMAL);
                         mVibratorHelper.vibrate(VibrationEffect.EFFECT_HEAVY_CLICK);
-                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_normal, Toast.LENGTH_SHORT).show();
+                        toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_normal;
                         break;
                 }
             }
+        if (mSilenceToast != null) mSilenceToast.cancel();
+        mSilenceToast = Toast.makeText(mContext, toastText, Toast.LENGTH_SHORT);
+        mSilenceToast.show();
         } else if (CUSTOM_GESTURE_ACTION_EXPLICIT_INTENT.equals(actionType)) {
             if (actionParams == null)
                 return;
