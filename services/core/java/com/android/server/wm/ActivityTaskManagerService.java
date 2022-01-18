@@ -272,6 +272,7 @@ import com.android.server.uri.NeededUriGrants;
 import com.android.server.uri.UriGrantsManagerInternal;
 
 import com.android.internal.util.PropImitationHooks;
+import com.android.internal.util.CutoutFullscreenController;
 import com.android.server.usage.AppStandbyInternal;
 
 import java.io.BufferedReader;
@@ -785,6 +786,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
     private int mDeviceOwnerUid = Process.INVALID_UID;
 
     public AppStandbyInternal mAppStandbyInternal;
+    private CutoutFullscreenController mCutoutFullscreenController;
 
     private final class SettingObserver extends ContentObserver {
         private final Uri mFontScaleUri = Settings.System.getUriFor(FONT_SCALE);
@@ -884,6 +886,9 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
 
     public void installSystemProviders() {
         mSettingsObserver = new SettingObserver();
+
+        // Force full screen for devices with cutout
+        mCutoutFullscreenController = new CutoutFullscreenController(mContext);
     }
 
     public void retrieveSettings(ContentResolver resolver) {
@@ -6928,6 +6933,12 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                 final ActivityRecord r = ActivityRecord.isInRootTaskLocked(activityToken);
                 return r != null && r.isInterestingToUserLocked();
             }
+        }
+    }
+
+    public boolean shouldForceCutoutFullscreen(String packageName) {
+        synchronized (this) {
+            return mCutoutFullscreenController.shouldForceCutoutFullscreen(packageName);
         }
     }
 }
