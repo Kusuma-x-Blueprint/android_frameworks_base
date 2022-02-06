@@ -79,4 +79,7 @@
         <item>Show percentage inside the icon</item>
         <item>Don\'t show percentage (default)</item>
     </string-array>
+
+    <!-- Label for UI element which allows to use lens on screenshot [CHAR LIMIT=30] -->
+    <string name="screenshot_lens_label">Lens</string>
 </resources>
