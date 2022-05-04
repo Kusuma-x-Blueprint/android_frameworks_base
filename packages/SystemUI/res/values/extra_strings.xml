@@ -38,4 +38,7 @@
     <string name="usage_data_unknown">Unknown data usage</string>
     <string name="usage_data_internet_dialog">Today\u0027s mobile data usage reaching</string>
     <string name="usage_wifi_internet_dialog">Today\u0027s Wi-Fi data usage reaching</string>
+
+    <!-- Auto brightness tile -->
+    <string name="quick_settings_autobrightness_label">Adaptive brightness</string>
 </resources>
