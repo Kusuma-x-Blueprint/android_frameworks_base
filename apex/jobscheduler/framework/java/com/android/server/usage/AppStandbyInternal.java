@@ -252,6 +252,8 @@ public interface AppStandbyInternal {
 
     boolean isAppIdleEnabled();
 
+    boolean isStrictStandbyPolicyEnabled();
+
     /**
      * Returns the duration (in millis) for the window where events occurring will be
      * considered as broadcast response, starting from the point when an app receives
