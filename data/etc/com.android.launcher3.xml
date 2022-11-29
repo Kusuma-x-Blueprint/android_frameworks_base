@@ -30,5 +30,6 @@
         <permission name="android.permission.MANAGE_USERS"/>
         <permission name="android.permission.FORCE_STOP_PACKAGES"/>
         <permission name="android.permission.MANAGE_APP_LOCK"/>
+        <permission name="android.permission.MANAGE_PARALLEL_SPACES" />
     </privapp-permissions>
 </permissions>
