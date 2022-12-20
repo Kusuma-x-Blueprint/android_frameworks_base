@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.phone;
 
 import android.content.Context;
+import android.os.UserHandle;
 import android.util.Log;
 import android.view.View;
 
@@ -53,33 +54,46 @@ public class ClockController implements TunerService.Tunable {
         mLeftClock = statusBar.findViewById(R.id.clock);
         mRightClock = statusBar.findViewById(R.id.clock_right);
 
-        mActiveClock = mLeftClock;
+        mClockPosition = LineageSettings.System.getIntForUser(mContext.getContentResolver(),
+                    CLOCK_POSITION, CLOCK_POSITION_LEFT, UserHandle.USER_CURRENT);
+        updateActiveClock();
 
         Dependency.get(TunerService.class).addTunable(this,
                 StatusBarIconController.ICON_HIDE_LIST, CLOCK_POSITION);
     }
 
     public Clock getClock() {
-        switch (mClockPosition) {
-            case CLOCK_POSITION_RIGHT:
-                return mRightClock;
-            case CLOCK_POSITION_CENTER:
-                return mCenterClock;
-            case CLOCK_POSITION_LEFT:
-            default:
-                return mLeftClock;
-        }
+        return mActiveClock;
     }
 
     private void updateActiveClock() {
-        mActiveClock.setClockVisibleByUser(false);
-        removeDarkReceiver();
-        mActiveClock = getClock();
-        mActiveClock.setClockVisibleByUser(true);
-        addDarkReceiver();
-
-        // Override any previous setting
-        mActiveClock.setClockVisibleByUser(!mBlackListed);
+        switch (mClockPosition) {
+            case CLOCK_POSITION_RIGHT:
+                mActiveClock = mRightClock;
+                mLeftClock.setClockVisibleByUser(false);
+                mCenterClock.setClockVisibleByUser(false);
+                mRightClock.setClockVisibleByUser(true);
+                // Override any previous setting
+                mRightClock.setClockVisibleByUser(!mBlackListed);
+                break;
+            case CLOCK_POSITION_CENTER:
+                mActiveClock = mCenterClock;
+                mLeftClock.setClockVisibleByUser(false);
+                mRightClock.setClockVisibleByUser(false);
+                mCenterClock.setClockVisibleByUser(true);
+                // Override any previous setting
+                mCenterClock.setClockVisibleByUser(!mBlackListed);
+                break;
+            case CLOCK_POSITION_LEFT:
+            default:
+                mActiveClock = mLeftClock;
+                mCenterClock.setClockVisibleByUser(false);
+                mRightClock.setClockVisibleByUser(false);
+                mLeftClock.setClockVisibleByUser(true);
+                // Override any previous setting
+                mLeftClock.setClockVisibleByUser(!mBlackListed);
+                break;
+        }
     }
 
     @Override
