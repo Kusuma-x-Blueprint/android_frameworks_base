@@ -22,6 +22,7 @@ import android.annotation.IntDef;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.net.Uri;
@@ -179,6 +180,24 @@ public class QRCodeScannerController implements
         return mIntent != null && isActivityCallable(mIntent);
     }
 
+    public static boolean isPackageInstalled(Context context, String packageName, boolean ignoreState) {
+        if (packageName != null) {
+            try {
+                PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, 0);
+                if (!pi.applicationInfo.enabled && !ignoreState) {
+                    return false;
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean isPackageInstalled(Context context, String packageName) {
+        return isPackageInstalled(context, packageName, true);
+    }
+
     /**
      * Register the change observers for {@link QRCodeScannerChangeEvent}
      *
@@ -278,7 +297,7 @@ public class QRCodeScannerController implements
         bundle.putString("caller_package", GSA_PACKAGE);
         bundle.putLong("start_activity_time_nanos", SystemClock.elapsedRealtimeNanos());
         intent.setComponent(new ComponentName(GSA_PACKAGE, LENS_ACTIVITY))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK)
                 .setPackage(GSA_PACKAGE)
                 .setData(Uri.parse("google://lens"))
                 .putExtra("lens_activity_params", bundle);
@@ -300,18 +319,19 @@ public class QRCodeScannerController implements
         String prevQrCodeScannerActivity = mQRCodeScannerActivity;
         ComponentName componentName = null;
         Intent intent = new Intent();
-        if (qrCodeScannerActivity != null) {
+        if (qrCodeScannerActivity != null && !qrCodeScannerActivity.isEmpty()) {
             componentName = ComponentName.unflattenFromString(qrCodeScannerActivity);
             intent.setComponent(componentName);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         }
 
         Intent lensIntent = getLensIntent();
-        if (isActivityAvailable(intent)) {
+        if (intent != null && isActivityAvailable(intent)) {
             mQRCodeScannerActivity = qrCodeScannerActivity;
             mComponentName = componentName;
             mIntent = intent;
-        } else if (isActivityCallable(lensIntent)) {
+        } else if (isPackageInstalled(mContext, GSA_PACKAGE, false) &&
+                lensIntent != null && isActivityCallable(lensIntent)) {
             mQRCodeScannerActivity = LENS_ACTIVITY;
             mComponentName = lensIntent.getComponent();
             mIntent = lensIntent;
