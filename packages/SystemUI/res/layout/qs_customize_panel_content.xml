@@ -15,7 +15,8 @@
      limitations under the License.
 -->
 
-<merge xmlns:android="http://schemas.android.com/apk/res/android">->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:priv-android="http://schemas.android.com/apk/prv/res/android">
     <View
         android:id="@+id/customizer_transparent_view"
         android:layout_width="match_parent"
@@ -55,5 +56,4 @@
             android:scrollbarStyle="outsideOverlay"
             android:importantForAccessibility="auto" />
     </com.android.keyguard.AlphaOptimizedLinearLayout>
-
 </merge>
