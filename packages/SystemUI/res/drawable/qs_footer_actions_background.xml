@@ -13,9 +13,10 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android">
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:priv-android="http://schemas.android.com/apk/prv/res/android">
     <shape>
-        <solid android:color="?attr/underSurfaceColor"/>
+        <solid android:color="?priv-android:attr/colorSurfaceHeader"/>
         <corners android:topLeftRadius="@dimen/qs_corner_radius"
                  android:topRightRadius="@dimen/qs_corner_radius"/>
     </shape>

@@ -15,7 +15,8 @@
      limitations under the License.
 -->
 
-<merge xmlns:android="http://schemas.android.com/apk/res/android">->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:priv-android="http://schemas.android.com/apk/prv/res/android">
     <View
         android:id="@+id/customizer_transparent_view"
         android:layout_width="match_parent"
@@ -56,4 +57,10 @@
             android:importantForAccessibility="auto" />
     </com.android.keyguard.AlphaOptimizedLinearLayout>
 
+    <View
+        android:id="@+id/nav_bar_background"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/navigation_bar_size"
+        android:layout_gravity="bottom"
+        android:background="?priv-android:attr/colorSurfaceHeader" />
 </merge>
