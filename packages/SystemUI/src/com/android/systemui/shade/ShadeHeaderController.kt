@@ -36,6 +36,7 @@ import android.view.WindowInsets
 import android.widget.TextView
 import androidx.annotation.VisibleForTesting
 import androidx.constraintlayout.motion.widget.MotionLayout
+import androidx.core.view.doOnLayout
 import com.android.settingslib.Utils
 import com.android.systemui.Dumpable
 import com.android.systemui.R
@@ -262,6 +263,7 @@ constructor(
 
             override fun onUiModeChanged() {
                 updateResources()
+                updateCarrierGroupPadding()
             }
         }
 
@@ -301,6 +303,7 @@ constructor(
         privacyIconsController.chipVisibilityListener = chipVisibilityListener
         updateVisibility()
         updateTransition()
+        updateCarrierGroupPadding()
 
         header.setOnApplyWindowInsetsListener(insetListener)
 
@@ -308,8 +311,6 @@ constructor(
             val newPivot = if (v.isLayoutRtl) v.width.toFloat() else 0f
             v.pivotX = newPivot
             v.pivotY = v.height.toFloat() / 2
-
-            qsCarrierGroup.setPaddingRelative((v.width * v.scaleX).toInt(), 0, 0, 0)
         }
 
         dumpManager.registerDumpable(this)
@@ -355,6 +356,14 @@ constructor(
         header
             .getConstraintSet(LARGE_SCREEN_HEADER_CONSTRAINT)
             .load(context, resources.getXml(R.xml.large_screen_shade_header))
+    }
+
+    private fun updateCarrierGroupPadding() {
+        clock.doOnLayout {
+            val maxClockWidth =
+                (clock.width * resources.getFloat(R.dimen.qqs_expand_clock_scale)).toInt()
+            qsCarrierGroup.setPaddingRelative(maxClockWidth, 0, 0, 0)
+        }
     }
 
     private fun updateConstraintsForInsets(view: MotionLayout, insets: WindowInsets) {
