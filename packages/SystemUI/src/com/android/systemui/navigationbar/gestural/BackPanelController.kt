@@ -160,6 +160,10 @@ class BackPanelController internal constructor(
 
     private val failsafeRunnable = Runnable { onFailsafe() }
 
+    private var longSwipeThreshold = 0f
+    private var triggerLongSwipe = false
+    private var isLongSwipeEnabled = false
+
     internal enum class GestureState {
         /* Arrow is off the screen and invisible */
         GONE,
@@ -280,13 +284,16 @@ class BackPanelController internal constructor(
                 startIsLeft = mView.isLeftPanel
                 hasPassedDragSlop = false
                 mView.resetStretch()
+                mView.triggerLongSwipe = false
             }
             MotionEvent.ACTION_MOVE -> {
                 if (dragSlopExceeded(event.x, startX)) {
+                    mView.triggerLongSwipe = triggerLongSwipe
                     handleMoveEvent(event)
                 }
             }
             MotionEvent.ACTION_UP -> {
+                mView.triggerLongSwipe = triggerLongSwipe
                 when (currentState) {
                     GestureState.ENTRY -> {
                         if (isFlungAwayFromEdge(endX = event.x)) {
@@ -323,6 +330,7 @@ class BackPanelController internal constructor(
                 velocityTracker = null
             }
             MotionEvent.ACTION_CANCEL -> {
+                mView.triggerLongSwipe = triggerLongSwipe
                 // Receiving a CANCEL implies that something else intercepted
                 // the gesture, i.e., the user did not cancel their gesture.
                 // Therefore, disappear immediately, with minimum fanfare.
@@ -453,6 +461,10 @@ class BackPanelController internal constructor(
                 GestureState.INACTIVE -> stretchInactiveBackIndicator(gestureProgress)
                 else -> {}
             }
+        }
+
+        if (isLongSwipeEnabled) {
+            setTriggerLongSwipe(abs(xTranslation) > longSwipeThreshold)
         }
 
         setArrowStrokeAlpha(gestureProgress)
@@ -603,6 +615,28 @@ class BackPanelController internal constructor(
         computeCurrentVelocity(PX_PER_SEC)
         val velocity = xVelocity.takeIf { mView.isLeftPanel } ?: (xVelocity * -1)
         velocity > velocityPxPerSecThreshold
+    }
+
+    override fun setLongSwipeEnabled(enabled: Boolean) {
+        longSwipeThreshold = if (enabled) MathUtils.min(
+            displaySize.x * 0.5f, layoutParams.width * 2.5f) else 0.0f
+        isLongSwipeEnabled = longSwipeThreshold > 0
+        setTriggerLongSwipe(isLongSwipeEnabled && triggerLongSwipe)
+    }
+
+    private fun setTriggerLongSwipe(enabled: Boolean) {
+        if (triggerLongSwipe != enabled) {
+            triggerLongSwipe = enabled
+            vibratorHelper.vibrate(VIBRATE_ACTIVATED_EFFECT)
+            updateRestingArrowDimens()
+            // Whenever the trigger back state changes
+            // the existing translation animation should be cancelled
+            cancelFailsafe()
+            mView.cancelAnimations()
+            mView.triggerLongSwipe = triggerLongSwipe
+            updateConfiguration()
+            backCallback.setTriggerLongSwipe(triggerLongSwipe)
+        }
     }
 
     private fun isFlungAwayFromEdge(endX: Float, startX: Float = touchDeltaStartX): Boolean {
@@ -813,9 +847,13 @@ class BackPanelController internal constructor(
             }
             GestureState.ENTRY,
             GestureState.INACTIVE -> {
+                setTriggerLongSwipe(false)
                 backCallback.setTriggerBack(false)
             }
             GestureState.ACTIVE -> {
+                if (triggerLongSwipe) {
+                    backCallback.triggerBack(false)
+                }
                 backCallback.setTriggerBack(true)
             }
             GestureState.GONE -> { }
