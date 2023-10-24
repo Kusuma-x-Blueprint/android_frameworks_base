@@ -285,7 +285,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     private ExpandableIndicator mExpandRows;
     private View mAppVolumeView;
     private ImageButton mAppVolumeIcon;
-    private FrameLayout mZenIcon;
     private final List<VolumeRow> mRows = new ArrayList<>();
     private final List<VolumeRow> mAppRows = new ArrayList<>();
     private ConfigurableTexts mConfigurableTexts;
@@ -742,7 +741,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         mRinger = mDialog.findViewById(R.id.ringer);
         if (mRinger != null) {
             mRingerIcon = mRinger.findViewById(R.id.ringer_icon);
-            mZenIcon = mRinger.findViewById(R.id.dnd_icon);
         }
 
         mSelectedRingerIcon = mDialog.findViewById(R.id.volume_new_ringer_active_icon);
@@ -1058,7 +1056,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         if (stream == STREAM_ACCESSIBILITY) {
             row.header.setFilters(new InputFilter[] {new InputFilter.LengthFilter(13)});
         }
-        row.dndIcon = row.view.findViewById(R.id.dnd_icon);
         row.slider = row.view.findViewById(R.id.volume_row_slider);
         row.slider.setOnSeekBarChangeListener(new VolumeSeekBarChangeListener(row));
         row.number = row.view.findViewById(R.id.volume_number);
@@ -2251,26 +2248,12 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     }
 
     /**
-     * Toggles enable state of views in a VolumeRow (not including seekbar or icon)
-     * Hides/shows zen icon
-     * @param enable whether to enable volume row views and hide dnd icon
-     */
-    private void enableVolumeRowViewsH(VolumeRow row, boolean enable) {
-        boolean showDndIcon = !enable;
-        row.dndIcon.setVisibility(showDndIcon ? VISIBLE : GONE);
-    }
-
-    /**
      * Toggles enable state of footer/ringer views
-     * Hides/shows zen icon
-     * @param enable whether to enable ringer views and hide dnd icon
+     * @param enable whether to enable ringer views
      */
     private void enableRingerViewsH(boolean enable) {
         if (mRingerIcon != null) {
             mRingerIcon.setEnabled(enable);
-        }
-        if (mZenIcon != null) {
-            mZenIcon.setVisibility(enable ? GONE : VISIBLE);
         }
     }
 
@@ -2386,9 +2369,11 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         // update icon
         final boolean iconEnabled = (mAutomute || ss.muteSupported) && !zenMuted;
         final int iconRes;
-        if (isRingVibrate) {
+        if (zenMuted) {
+            iconRes = com.android.internal.R.drawable.ic_qs_dnd;
+        } else if (isRingVibrate) {
             iconRes = R.drawable.ic_volume_ringer_vibrate;
-        } else if (isRingSilent || isNotificationMuted || zenMuted) {
+        } else if (isRingSilent || isNotificationMuted) {
             iconRes = row.iconMuteRes;
         } else if (ss.routedToBluetooth) {
             if (isVoiceCallStream) {
@@ -2460,7 +2445,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         if (zenMuted) {
             row.tracking = false;
         }
-        enableVolumeRowViewsH(row, !zenMuted);
 
         // update slider
         final boolean enableSlider = !zenMuted;
@@ -3051,7 +3035,6 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         private ObjectAnimator anim;  // slider progress animation for non-touch-related updates
         private int animTargetProgress;
         private int lastAudibleLevel = 1;
-        private FrameLayout dndIcon;
         private boolean isAppVolume = false;
         private AppVolume appVolume;
         private String packageName;
