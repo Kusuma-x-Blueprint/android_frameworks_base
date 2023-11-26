@@ -7442,5 +7442,8 @@ message MetricsEvent {
     // ACTION: QS Screenshot tile tapped
     // CATEGORY: QUICK_SETTINGS
     QS_SCREENSHOT = 1936;
+
+    // OPEN: Settings > Battery > Battery health
+    BATTERY_HEALTH = 1937;
   }
 }
