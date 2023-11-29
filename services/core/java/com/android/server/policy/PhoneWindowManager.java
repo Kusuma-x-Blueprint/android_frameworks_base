@@ -6961,7 +6961,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     @Override
     public void takeFullScreenshot() {
-        interceptScreenshotChord(
-                TAKE_SCREENSHOT_FULLSCREEN, SCREENSHOT_KEY_OTHER, 0 /*pressDelay*/);
+        final boolean screenshotChordEnable = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_enableScreenshotChord);
+
+        if (screenshotChordEnable) {
+            interceptScreenshotChord(
+                    TAKE_SCREENSHOT_FULLSCREEN, SCREENSHOT_KEY_OTHER, 0 /*pressDelay*/);
+        }
     }
 }
