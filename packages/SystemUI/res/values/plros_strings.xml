@@ -37,4 +37,7 @@
 
     <!-- Network traffic -->
     <string name="network_traffic_title">Network traffic</string>
+
+    <!-- Face unlock -->
+    <string name="face_unlock_recognizing">Recognizing face...</string>
 </resources>
