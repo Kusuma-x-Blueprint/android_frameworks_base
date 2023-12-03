@@ -7445,5 +7445,8 @@ message MetricsEvent {
 
     // OPEN: Settings > Battery > Battery health
     BATTERY_HEALTH = 1937;
+
+    // OPEN: Settings > System > Gestures > Button combinations
+    BUTTON_COMBINATION = 1938;
   }
 }
