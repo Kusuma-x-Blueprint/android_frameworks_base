@@ -95,6 +95,7 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private static final String CUSTOM_GESTURE_ACTION_RINGER_MODE_NORMAL = "normal";
     private static final String CUSTOM_GESTURE_ACTION_RINGER_MODE_VIBRATE = "vibrate";
     private static final String CUSTOM_GESTURE_ACTION_RINGER_MODE_SILENT = "silent";
+    private static final String CUSTOM_GESTURE_ACTION_RINGER_MODE_CYCLE = "cycle";
 
     private final CentralSurfaces mCentralSurfaces;
     private final Context mContext;
@@ -660,6 +661,24 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_SILENT.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
                 Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_silent, Toast.LENGTH_SHORT).show();
+            } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_CYCLE.equals(actionParams)) {
+                int ringerMode = mAudioManager.getRingerMode();
+                switch (ringerMode) {
+                    case AudioManager.RINGER_MODE_NORMAL:
+                        mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_VIBRATE);
+                        mVibratorHelper.vibrate(VibrationEffect.EFFECT_DOUBLE_CLICK);
+                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate, Toast.LENGTH_SHORT).show();
+                        break;
+                    case AudioManager.RINGER_MODE_VIBRATE:
+                        mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
+                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_silent, Toast.LENGTH_SHORT).show();
+                        break;
+                    case AudioManager.RINGER_MODE_SILENT:
+                        mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_NORMAL);
+                        mVibratorHelper.vibrate(VibrationEffect.EFFECT_HEAVY_CLICK);
+                        Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_normal, Toast.LENGTH_SHORT).show();
+                        break;
+                }
             }
         } else if (CUSTOM_GESTURE_ACTION_EXPLICIT_INTENT.equals(actionType)) {
             if (actionParams == null)
