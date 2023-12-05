@@ -27,4 +27,7 @@
     <java-symbol type="anim" name="activity_freeform_open_exit" />
     <java-symbol type="anim" name="activity_freeform_close_enter" />
     <java-symbol type="anim" name="activity_freeform_close_exit" />
+
+    <!-- Ringer mode normal -->
+    <java-symbol type="string" name="volume_dialog_ringer_guidance_normal" />
 </resources>

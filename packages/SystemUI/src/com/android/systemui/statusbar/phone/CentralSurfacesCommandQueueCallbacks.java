@@ -46,6 +46,7 @@ import android.view.KeyEvent;
 import android.view.WindowInsetsController.Appearance;
 import android.view.WindowInsetsController.Behavior;
 import android.view.WindowManagerGlobal;
+import android.widget.Toast;
 
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
@@ -651,11 +652,14 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
             if (CUSTOM_GESTURE_ACTION_RINGER_MODE_NORMAL.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_NORMAL);
                 mVibratorHelper.vibrate(VibrationEffect.EFFECT_HEAVY_CLICK);
+                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_normal, Toast.LENGTH_SHORT).show();
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_VIBRATE.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_VIBRATE);
                 mVibratorHelper.vibrate(VibrationEffect.EFFECT_DOUBLE_CLICK);
+                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate, Toast.LENGTH_SHORT).show();
             } else if (CUSTOM_GESTURE_ACTION_RINGER_MODE_SILENT.equals(actionParams)) {
                 mAudioManager.setRingerModeInternal(AudioManager.RINGER_MODE_SILENT);
+                Toast.makeText(mContext, com.android.internal.R.string.volume_dialog_ringer_guidance_silent, Toast.LENGTH_SHORT).show();
             }
         } else if (CUSTOM_GESTURE_ACTION_EXPLICIT_INTENT.equals(actionType)) {
             if (actionParams == null)
