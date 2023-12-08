@@ -56,6 +56,10 @@ public class PropImitationHooks {
     private static final String PROCESS_GMS_UNSTABLE = PACKAGE_GMS + ".unstable";
     private static final String PACKAGE_SETUPWIZARD = "com.google.android.setupwizard";
 
+    private static final String PROP_BUILD_ID = "persist.sys.pihooks.build_id";
+    private static final String PROP_SECURITY_PATCH = "persist.sys.pihooks.security_patch";
+    private static final String PROP_FIRST_API_LEVEL = "persist.sys.pihooks.first_api_level";
+
     private static final ComponentName GMS_ADD_ACCOUNT_ACTIVITY = ComponentName.unflattenFromString(
             "com.google.android.gms/.auth.uiflows.minutemaid.MinuteMaidActivity");
 
@@ -157,6 +161,9 @@ public class PropImitationHooks {
                 int certifiedPropsId = resources.getIdentifier("certifiedBuildProperties", "array", packageName);
                 if (certifiedPropsId != 0) {
                     String[] certifiedProps = resources.getStringArray(certifiedPropsId);
+                    setSystemProperty(PROP_BUILD_ID, Build.ID);
+                    setSystemProperty(PROP_SECURITY_PATCH, Build.VERSION.SECURITY_PATCH);
+                    setSystemProperty(PROP_FIRST_API_LEVEL, Integer.toString(Build.VERSION.DEVICE_INITIAL_SDK_INT));
                     setPropValue("MANUFACTURER", certifiedProps[0]);
                     setPropValue("MODEL", certifiedProps[1]);
                     setPropValue("FINGERPRINT", certifiedProps[2]);
@@ -191,6 +198,15 @@ public class PropImitationHooks {
             ActivityTaskManager.getService().registerTaskStackListener(taskStackListener);
         } catch (Exception e) {
             Log.e(TAG, "Failed to register task stack listener!", e);
+        }
+    }
+
+    private static void setSystemProperty(String name, String value) {
+        try {
+            SystemProperties.set(name, value);
+            dlog("Set system prop " + name + "=" + value);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set system prop " + name + "=" + value, e);
         }
     }
 
