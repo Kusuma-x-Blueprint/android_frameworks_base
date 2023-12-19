@@ -98,7 +98,6 @@ import com.android.systemui.keyguard.domain.interactor.AlternateBouncerInteracto
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.log.LogLevel;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
-import com.android.systemui.statusbar.phone.FaceUnlockImageView;
 import com.android.systemui.statusbar.phone.KeyguardBypassController;
 import com.android.systemui.statusbar.phone.KeyguardIndicationTextView;
 import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager;
@@ -149,7 +148,6 @@ public class KeyguardIndicationController {
     private final AuthController mAuthController;
     private final KeyguardLogger mKeyguardLogger;
     private ViewGroup mIndicationArea;
-    private FaceUnlockImageView mFaceIconView;
     private KeyguardIndicationTextView mTopIndicationView;
     private KeyguardIndicationTextView mLockScreenIndicationView;
     private final IBatteryStats mBatteryInfo;
@@ -345,7 +343,6 @@ public class KeyguardIndicationController {
 
     public void setIndicationArea(ViewGroup indicationArea) {
         mIndicationArea = indicationArea;
-        mFaceIconView = indicationArea.findViewById(R.id.face_unlock_icon);
         mTopIndicationView = indicationArea.findViewById(R.id.keyguard_indication_text);
         mLockScreenIndicationView = indicationArea.findViewById(
             R.id.keyguard_indication_text_bottom);
@@ -821,12 +818,6 @@ public class KeyguardIndicationController {
             return;
         }
         
-        if (TextUtils.equals(biometricMessage, mContext.getString(R.string.keyguard_face_successful_unlock))) {
-            mFaceIconView.setState(FaceUnlockImageView.State.SUCCESS);
-        } else if (TextUtils.equals(biometricMessage, mContext.getString(R.string.keyguard_face_failed))) {
-            mFaceIconView.setState(FaceUnlockImageView.State.NOT_VERIFIED);
-        }
-
         mBiometricMessage = biometricMessage;
         mBiometricMessageFollowUp = biometricMessageFollowUp;
 
@@ -851,16 +842,11 @@ public class KeyguardIndicationController {
     }
 
     private void showFaceUnlockRecognizingMessage() {
-        mFaceIconView.setVisibility(View.VISIBLE);
-        mFaceIconView.setState(FaceUnlockImageView.State.SCANNING);
         showBiometricMessage(mContext.getResources().getString(
                                     R.string.face_unlock_recognizing));
     }
 
     private void hideFaceUnlockRecognizingMessage() {
-        if (mFaceIconView != null) {
-            mFaceIconView.setVisibility(View.GONE);
-        }
         String faceUnlockMessage = mContext.getResources().getString(
             R.string.face_unlock_recognizing);
         if (mBiometricMessage != null && mBiometricMessage == faceUnlockMessage) {
