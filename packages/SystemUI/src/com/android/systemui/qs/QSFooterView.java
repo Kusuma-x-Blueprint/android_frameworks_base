@@ -106,13 +106,14 @@ public class QSFooterView extends FrameLayout {
         }
 
         DataUsageController.DataUsageInfo info = isWifiConnected() ? mDataController.getWifiDailyDataUsageInfo() : mDataController.getDailyDataUsageInfo();
-        boolean showData = info != null && info.usageLevel >= 0 && (isWifiConnected() || isMobileDataEnabled());
+        boolean showData = info != null && info.usageLevel >= 0;
         if (showData) {
             String suffix = mContext.getResources().getString(isWifiConnected() ? R.string.usage_wifi_default_suffix : R.string.usage_data_default_suffix);
             String dataUsage = formatDataUsage(info.usageLevel) + " " + mContext.getResources().getString(R.string.usage_data) + " (" + suffix + ")";
             mUsageText.setText(dataUsage);
         } else {
-            mUsageText.setVisibility(View.INVISIBLE);
+            String unknownDataUsage = mContext.getResources().getString(R.string.usage_data_unknown);
+            mUsageText.setText(unknownDataUsage);
         }
     }
 

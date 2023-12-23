@@ -26,6 +26,7 @@
     <string name="usage_data_default_suffix">Data</string>
     <string name="usage_wifi_default_suffix">Wi-Fi</string>
     <string name="usage_data_unavailable">Network unavailable</string>
+    <string name="usage_data_unknown">Unknown data usage</string>
 
     <!-- Status bar network traffic monitor strings -->
     <string name="kilobitspersecond_short" translatable="false">kb/s</string>
