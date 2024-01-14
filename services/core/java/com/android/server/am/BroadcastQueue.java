@@ -939,14 +939,7 @@ public final class BroadcastQueue {
         }
 
         if (!skip) {
-            synchronized (mService.mProcLock) {
-                if (filter.receiverList.app.mOptRecord.ignoreTempUnfreeze()) {
-                    Slog.i(TAG, "Skipping delivery " + r.intent
-                            + " to " + filter.receiverList.app
-                            + "(registered) because of force freeze");
-                    skip = true;
-                }
-            }
+            synchronized (mService.mProcLock) {}
         }
 
         if (skip) {
@@ -1845,14 +1838,7 @@ public final class BroadcastQueue {
 
         if (!skip) {
             if (app != null) {
-                synchronized (mService.mProcLock) {
-                    if (app.mOptRecord.ignoreTempUnfreeze()) {
-                        Slog.i(TAG, "Skipping delivery " + r.intent
-                                + " to " + app
-                                + " because of force freeze");
-                        skip = true;
-                    }
-                }
+                synchronized (mService.mProcLock) {}
             } else {
                 // Application not running, skip if blacklisted.
                 if (mService.isBackgroundRestricted(info.activityInfo.applicationInfo)) {
