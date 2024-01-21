@@ -23,7 +23,6 @@ package com.android.systemui.pulse;
 import com.android.systemui.Dependency;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
@@ -34,31 +33,19 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.TypedValue;
 
-import com.android.internal.util.ContrastColorUtil;
-
 public class ColorController extends ContentObserver
         implements ColorAnimator.ColorAnimationListener,
         ConfigurationController.ConfigurationListener {
-    public static final int COLOR_TYPE_ACCENT = 0;
-    public static final int COLOR_TYPE_USER = 1;
-    public static final int COLOR_TYPE_LAVALAMP = 2;
-    public static final int LAVA_LAMP_SPEED_DEF = 10000;
 
     private Context mContext;
     private Renderer mRenderer;
-    private ColorAnimator mLavaLamp;
-    private int mColorType;
     private int mAccentColor;
-    private int mColor;
 
     public ColorController(Context context, Handler handler) {
         super(handler);
         mContext = context;
-        mLavaLamp = new ColorAnimator();
-        mLavaLamp.setColorAnimatorListener(this);
         mAccentColor = getAccentColor();
         updateSettings();
-        startListening();
         Dependency.get(ConfigurationController.class).addCallback(this);
     }
 
@@ -67,58 +54,14 @@ public class ColorController extends ContentObserver
         notifyRenderer();
     }
 
-    void startListening() {
-        ContentResolver resolver = mContext.getContentResolver();
-        resolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.PULSE_COLOR_MODE), false,
-                this,
-                UserHandle.USER_ALL);
-        resolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.PULSE_COLOR_USER), false, this,
-                UserHandle.USER_ALL);
-        resolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.PULSE_LAVALAMP_SPEED), false, this,
-                UserHandle.USER_ALL);
-    }
-
     void updateSettings() {
-        ContentResolver resolver = mContext.getContentResolver();
-        if (mColorType == COLOR_TYPE_LAVALAMP) {
-            stopLavaLamp();
-        }
-        mColorType = Settings.Secure.getIntForUser(resolver,
-                Settings.Secure.PULSE_COLOR_MODE, COLOR_TYPE_LAVALAMP, UserHandle.USER_CURRENT);
-        mColor = Settings.Secure.getIntForUser(resolver,
-                Settings.Secure.PULSE_COLOR_USER,
-                0x92FFFFFF,
-                UserHandle.USER_CURRENT);
-        int lava_speed = Settings.Secure.getIntForUser(resolver,
-                Settings.Secure.PULSE_LAVALAMP_SPEED, LAVA_LAMP_SPEED_DEF,
-                UserHandle.USER_CURRENT);
-        mLavaLamp.setAnimationTime(lava_speed);
         notifyRenderer();
     }
 
     void notifyRenderer() {
         if (mRenderer != null) {
-            if (mColorType == COLOR_TYPE_ACCENT) {
-                mRenderer.onUpdateColor(mAccentColor);
-            } else if (mColorType == COLOR_TYPE_USER) {
-                mRenderer.onUpdateColor(mColor);
-            } else if (mColorType == COLOR_TYPE_LAVALAMP && mRenderer.isValidStream()) {
-                startLavaLamp();
-            }
+            mRenderer.onUpdateColor(mAccentColor);
         }
-    }
-
-    void startLavaLamp() {
-        if (mColorType == COLOR_TYPE_LAVALAMP) {
-            mLavaLamp.start();
-        }
-    }
-
-    void stopLavaLamp() {
-        mLavaLamp.stop();
     }
 
     int getAccentColor() {
@@ -138,7 +81,7 @@ public class ColorController extends ContentObserver
         final int currentAccent = getAccentColor();
         if (lastAccent != currentAccent) {
             mAccentColor = currentAccent;
-            if (mRenderer != null && mColorType == COLOR_TYPE_ACCENT) {
+            if (mRenderer != null) {
                 mRenderer.onUpdateColor(mAccentColor);
             }
         }

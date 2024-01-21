@@ -7451,8 +7451,5 @@ message MetricsEvent {
 
     // OPEN: Settings > Security > More security settings > App lock
     APP_LOCK = 1939;
-
-    // OPEN: Settings > Sound & vibration > Pulse
-    PULSE_SETTINGS = 1940;
   }
 }

@@ -38,10 +38,9 @@ import androidx.core.graphics.ColorUtils;
 
 public class SolidLineRenderer extends Renderer {
     private Paint mPaint;
-    private int mUnitsOpacity = 200;
+    private int mUnitsOpacity = 255;
     private int mColor = Color.WHITE;
     private ValueAnimator[] mValueAnimators;
-    private FFTAverage[] mFFTAverage;
     private float[] mFFTPoints;
 
     private byte rfk, ifk;
@@ -52,8 +51,6 @@ public class SolidLineRenderer extends Renderer {
     private boolean mLeftInLandscape;
     private int mWidth, mHeight, mUnits;
 
-    private boolean mSmoothingEnabled;
-    private boolean mRounded;
     private CMRendererObserver mObserver;
 
     public SolidLineRenderer(Context context, Handler handler, PulseView view,
@@ -61,7 +58,7 @@ public class SolidLineRenderer extends Renderer {
         super(context, handler, view, colorController);
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
-        mDbFuzzFactor = 5;
+        mDbFuzzFactor = 3;
         mObserver = new CMRendererObserver(handler);
         mObserver.updateSettings();
         loadValueAnimators();
@@ -116,7 +113,7 @@ public class SolidLineRenderer extends Renderer {
         float barWidth = barUnit * 8f / 9f;
         barUnit = barWidth + (barUnit - barWidth) * units / (units - 1);
         mPaint.setStrokeWidth(barWidth);
-        mPaint.setStrokeCap(mRounded ? Paint.Cap.ROUND : Paint.Cap.BUTT);
+        mPaint.setStrokeCap(Paint.Cap.ROUND);
         for (int i = 0; i < mUnits; i++) {
             mFFTPoints[i * 4] = mFFTPoints[i * 4 + 2] = i * barUnit + (barWidth / 2);
             mFFTPoints[i * 4 + 1] = mHeight;
@@ -130,7 +127,7 @@ public class SolidLineRenderer extends Renderer {
         float barHeight = barUnit * 8f / 9f;
         barUnit = barHeight + (barUnit - barHeight) * units / (units - 1);
         mPaint.setStrokeWidth(barHeight);
-        mPaint.setStrokeCap(mRounded ? Paint.Cap.ROUND : Paint.Cap.BUTT);
+        mPaint.setStrokeCap(Paint.Cap.ROUND);
         for (int i = 0; i < mUnits; i++) {
             mFFTPoints[i * 4 + 1] = mFFTPoints[i * 4 + 3] = i * barUnit + (barHeight / 2);
             mFFTPoints[i * 4] = mLeftInLandscape ? 0 : mWidth;
@@ -158,7 +155,6 @@ public class SolidLineRenderer extends Renderer {
         mIsValidStream = isValid;
         if (isValid) {
             onSizeChanged(0, 0, 0, 0);
-            mColorController.startLavaLamp();
         }
     }
 
@@ -172,12 +168,6 @@ public class SolidLineRenderer extends Renderer {
             ifk = fft[i * 2 + 3];
             magnitude = rfk * rfk + ifk * ifk;
             dbValue = magnitude > 0 ? (int) (10 * Math.log10(magnitude)) : 0;
-            if (mSmoothingEnabled) {
-                if (mFFTAverage == null) {
-                    setupFFTAverage();
-                }
-                dbValue = mFFTAverage[i].average(dbValue);
-            }
             if (mVertical) {
                 if (mLeftInLandscape) {
                     mValueAnimators[i].setFloatValues(mFFTPoints[i * 4],
@@ -200,19 +190,6 @@ public class SolidLineRenderer extends Renderer {
     }
 
     @Override
-    public void destroy() {
-        mContext.getContentResolver().unregisterContentObserver(mObserver);
-        mColorController.stopLavaLamp();
-    }
-
-    @Override
-    public void onVisualizerLinkChanged(boolean linked) {
-        if (!linked) {
-            mColorController.stopLavaLamp();
-        }
-    }
-
-    @Override
     public void onUpdateColor(int color) {
         mColor = color;
         mPaint.setColor(ColorUtils.setAlphaComponent(mColor, mUnitsOpacity));
@@ -221,26 +198,6 @@ public class SolidLineRenderer extends Renderer {
     private class CMRendererObserver extends ContentObserver {
         public CMRendererObserver(Handler handler) {
             super(handler);
-            register();
-        }
-
-        void register() {
-            ContentResolver resolver = mContext.getContentResolver();
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SOLID_FUDGE_FACTOR), false, this,
-                    UserHandle.USER_ALL);
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SOLID_UNITS_COUNT), false, this,
-                    UserHandle.USER_ALL);
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SOLID_UNITS_OPACITY), false, this,
-                    UserHandle.USER_ALL);
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SMOOTHING_ENABLED), false, this,
-                    UserHandle.USER_ALL);
-            resolver.registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SOLID_UNITS_ROUNDED), false, this,
-                    UserHandle.USER_ALL);
         }
 
         @Override
@@ -249,50 +206,15 @@ public class SolidLineRenderer extends Renderer {
         }
 
         public void updateSettings() {
-            ContentResolver resolver = mContext.getContentResolver();
-
-            // putFloat, getFloat is better. catch it next time
-            mDbFuzzFactor = Settings.Secure.getIntForUser(
-                    resolver, Settings.Secure.PULSE_SOLID_FUDGE_FACTOR, 4,
-                    UserHandle.USER_CURRENT);
-            mSmoothingEnabled = Settings.Secure.getIntForUser(resolver,
-                    Settings.Secure.PULSE_SMOOTHING_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
-            mRounded = Settings.Secure.getIntForUser(resolver, 
-                    Settings.Secure.PULSE_SOLID_UNITS_ROUNDED, 0, UserHandle.USER_CURRENT) == 1;
-
-            int units = Settings.Secure.getIntForUser(
-                    resolver, Settings.Secure.PULSE_SOLID_UNITS_COUNT, 32,
-                    UserHandle.USER_CURRENT);
+            int units = 32;
             if (units != mUnits) {
                 stopAnimation(mUnits);
                 mUnits = units;
                 mFFTPoints = new float[mUnits * 4];
-                if (mSmoothingEnabled) {
-                    setupFFTAverage();
-                }
                 onSizeChanged(0, 0, 0, 0);
             }
 
-            if (mSmoothingEnabled) {
-                if (mFFTAverage == null) {
-                    setupFFTAverage();
-                }
-            } else {
-                mFFTAverage = null;
-            }
-
-            mUnitsOpacity= Settings.Secure.getIntForUser(
-                    resolver, Settings.Secure.PULSE_SOLID_UNITS_OPACITY, 200,
-                    UserHandle.USER_CURRENT);
-
             mPaint.setColor(ColorUtils.setAlphaComponent(mColor, mUnitsOpacity));
-        }
-    }
-
-    private void setupFFTAverage() {
-        mFFTAverage = new FFTAverage[mUnits];
-        for (int i = 0; i < mUnits; i++) {
-            mFFTAverage[i] = new FFTAverage();
         }
     }
 }

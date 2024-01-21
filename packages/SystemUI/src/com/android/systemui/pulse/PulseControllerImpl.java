@@ -75,8 +75,6 @@ public class PulseControllerImpl implements
     public static final boolean DEBUG = false;
 
     private static final String TAG = PulseControllerImpl.class.getSimpleName();
-    private static final int RENDER_STYLE_LEGACY = 0;
-    private static final int RENDER_STYLE_CM = 1;
 
     private Context mContext;
     private AudioManager mAudioManager;
@@ -85,7 +83,6 @@ public class PulseControllerImpl implements
     private ColorController mColorController;
     private SettingsObserver mSettingsObserver;
     private PulseView mPulseView;
-    private int mPulseStyle;
     private CentralSurfacesImpl mStatusbar;
     private final PowerManager mPowerManager;
 
@@ -173,30 +170,19 @@ public class PulseControllerImpl implements
             mContext.getContentResolver().registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.LOCKSCREEN_PULSE_ENABLED), false, this,
                     UserHandle.USER_ALL);
-            mContext.getContentResolver().registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.AMBIENT_PULSE_ENABLED), false, this,
-                    UserHandle.USER_ALL);
-            mContext.getContentResolver().registerContentObserver(
-                    Settings.Secure.getUriFor(Settings.Secure.PULSE_RENDER_STYLE), false, this,
-                    UserHandle.USER_ALL);
         }
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             if (uri.equals(Settings.Secure.getUriFor(Settings.Secure.NAVBAR_PULSE_ENABLED))
-                    || uri.equals(Settings.Secure.getUriFor(Settings.Secure.LOCKSCREEN_PULSE_ENABLED))
-                    || uri.equals(Settings.Secure.getUriFor(Settings.Secure.AMBIENT_PULSE_ENABLED))) {
+                    || uri.equals(Settings.Secure.getUriFor(Settings.Secure.LOCKSCREEN_PULSE_ENABLED))) {
                 updateEnabled();
                 updatePulseVisibility();
-            } else if (uri.equals(Settings.Secure.getUriFor(Settings.Secure.PULSE_RENDER_STYLE))) {
-                updateRenderMode();
-                loadRenderer();
             }
         }
 
         void updateSettings() {
             updateEnabled();
-            updateRenderMode();
         }
 
         void updateEnabled() {
@@ -205,12 +191,7 @@ public class PulseControllerImpl implements
             mLsPulseEnabled = Settings.Secure.getIntForUser(mContext.getContentResolver(),
                     Settings.Secure.LOCKSCREEN_PULSE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
             mAmbPulseEnabled = Settings.Secure.getIntForUser(mContext.getContentResolver(),
-                    Settings.Secure.AMBIENT_PULSE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
-        }
-
-        void updateRenderMode() {
-            mPulseStyle = Settings.Secure.getIntForUser(mContext.getContentResolver(),
-                    Settings.Secure.PULSE_RENDER_STYLE, RENDER_STYLE_CM, UserHandle.USER_CURRENT);
+                    Settings.Secure.LOCKSCREEN_PULSE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
         }
     };
 
@@ -382,14 +363,7 @@ public class PulseControllerImpl implements
     }
 
     private Renderer getRenderer() {
-        switch (mPulseStyle) {
-            case RENDER_STYLE_LEGACY:
-                return new FadingBlockRenderer(mContext, mHandler, mPulseView, this, mColorController);
-            case RENDER_STYLE_CM:
-                return new SolidLineRenderer(mContext, mHandler, mPulseView, this, mColorController);
-            default:
-                return new FadingBlockRenderer(mContext, mHandler, mPulseView, this, mColorController);
-        }
+        return new SolidLineRenderer(mContext, mHandler, mPulseView, this, mColorController);
     }
 
     private boolean isMusicMuted(int streamType) {
