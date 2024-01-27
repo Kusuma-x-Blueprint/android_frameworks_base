@@ -520,6 +520,23 @@ constructor(
         header.setPadding(padding, header.paddingTop, padding, header.paddingBottom)
         updateQQSPaddings()
         qsBatteryModeController.updateResources()
+
+        val fillColor = Utils.getColorAttrDefaultColor(context, android.R.attr.textColorPrimary)
+        iconManager.setTint(fillColor)
+        val textColor = Utils.getColorAttrDefaultColor(context, android.R.attr.textColorPrimary)
+        val colorStateList = Utils.getColorAttr(context, android.R.attr.textColorPrimary)
+        if (textColor != textColorPrimary) {
+            val textColorSecondary = Utils.getColorAttrDefaultColor(context,
+                    android.R.attr.textColorSecondary)
+            textColorPrimary = textColor
+            if (iconManager != null) {
+                iconManager.setTint(textColor)
+            }
+            clock.setTextColor(textColorPrimary)
+            date.setTextColor(textColorPrimary)
+            qsCarrierGroup.updateColors(textColorPrimary, colorStateList)
+            batteryIcon.updateColors(textColorPrimary, textColorSecondary, textColorPrimary)
+        }
     }
 
     private fun updateQQSPaddings() {
