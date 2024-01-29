@@ -17,6 +17,7 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Screenshot Tile -->
     <string name="screenshot_long_press">Long press to partial screenshot</string>
+    <string name="quick_settings_screenshot_start">@string/quick_settings_screen_record_start</string>
 
     <!-- Screenshot Delete Toast -->
     <string name="delete_screenshot_toast">Screenshot deleted</string>

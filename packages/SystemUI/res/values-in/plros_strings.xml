@@ -26,4 +26,11 @@
     <string name="usage_data_default_suffix">Data seluler</string>
     <string name="usage_wifi_default_suffix">Wi-Fi</string>
     <string name="usage_data_unavailable">Tidak ada jaringan</string>
+    <string name="usage_data_unknown">Penggunaan data tidak diketahui</string>
+
+    <!-- Network traffic -->
+    <string name="network_traffic_title">Lalu lintas jaringan</string>
+
+    <!-- Face unlock -->
+    <string name="face_unlock_recognizing">Mengenali wajah...</string>
 </resources>
