@@ -346,11 +346,6 @@ oneway interface IStatusBar
      */
     void showMediaOutputSwitcher(String packageName);
 
-    /**
-     * Triggers custom gesture actions.
-     */
-    void onCustomGestureAction(String action);
-
     void screenPinningStateChanged(boolean enabled);
     void leftInLandscapeChanged(boolean isLeft);
 }

@@ -200,8 +200,6 @@ public interface StatusBarManagerInternal {
      */
     void showMediaOutputSwitcher(String packageName);
 
-    void onCustomGestureAction(String action);
-
     /**
      * Window manager notifies SystemUI of navigation bar "left in landscape" changes
      */

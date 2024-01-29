@@ -11260,36 +11260,6 @@ public final class Settings {
         public static final String LOCK_SCREEN_WEATHER_ENABLED = "lockscreen_weather_enabled";
 
         /**
-         * Control key action of power key double tap.
-         * @hide
-         */
-        public static final String POWER_DOUBLE_TAP_ACTION = "power_double_tap_action";
-
-        /**
-         * Whether key combination wakeup is enabled.
-         * @hide
-         */
-        public static final String KEY_COMBINATION_WAKEUP = "key_combination_wakeup";
-
-        /**
-         * Control key action of power + vol down.
-         * @hide
-         */
-        public static final String POWER_VOL_DOWN_ACTION = "power_vol_down_action";
-
-        /**
-         * Control key action of power + vol up.
-         * @hide
-         */
-        public static final String POWER_VOL_UP_ACTION = "power_vol_up_action";
-
-        /**
-         * Control key action of vol up + vol down.
-         * @hide
-         */
-        public static final String VOL_UP_DOWN_ACTION = "vol_up_down_action";
-
-        /**
          * Whether to show ambient instead of waking for the dt2w gesture
          * @hide
          */

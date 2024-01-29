@@ -733,15 +733,6 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
         }
 
         @Override
-        public void onCustomGestureAction(String action) {
-            if (mBar != null) {
-                try {
-                    mBar.onCustomGestureAction(action);
-                } catch (RemoteException e) { }
-            }
-        }
-
-        @Override
         public void leftInLandscapeChanged(boolean isLeft) {
             if (mBar != null) {
                 try {

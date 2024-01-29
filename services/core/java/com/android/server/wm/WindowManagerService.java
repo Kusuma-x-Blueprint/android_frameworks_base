@@ -9366,9 +9366,4 @@ public class WindowManagerService extends IWindowManager.Stub
         return mAtmService.mBackNavigationController != null
                 ? mAtmService.mBackNavigationController.mBackNaviAnimationController : null;
     }
-
-    @Override
-    public void requestSystemScreenshot() {
-        mPolicy.takeFullScreenshot();
-    }
 }
