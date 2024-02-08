@@ -72,6 +72,7 @@ import android.os.Process;
 import android.os.RemoteCallback;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.os.UserManager.UserOperationException;
@@ -6806,6 +6807,11 @@ public class DevicePolicyManager {
     /** @hide per-user version */
     @UnsupportedAppUsage
     public int getStorageEncryptionStatus(int userHandle) {
+        final boolean noFbe = 
+                SystemProperties.getBoolean("persist.sys.extra.no_fbe_support", false);
+        if (noFbe) {
+            return ENCRYPTION_STATUS_ACTIVE;
+        }
         if (mService != null) {
             try {
                 return mService.getStorageEncryptionStatus(mContext.getPackageName(), userHandle);
