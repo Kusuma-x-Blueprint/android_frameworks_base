@@ -22,12 +22,8 @@ import android.annotation.IntDef;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.SystemClock;
 import android.provider.DeviceConfig;
 import android.provider.Settings;
 import android.util.Log;
@@ -89,9 +85,6 @@ public class QRCodeScannerController implements
     public static final int QR_CODE_SCANNER_PREFERENCE_CHANGE = 1;
 
     private static final String TAG = "QRCodeScannerController";
-
-    public static final String GSA_PACKAGE = "com.google.android.googlequicksearchbox";
-    public static final String LENS_ACTIVITY = "com.google.android.apps.lens.MainActivity";
 
     private final Context mContext;
     private final Executor mExecutor;
@@ -178,24 +171,6 @@ public class QRCodeScannerController implements
      */
     public boolean isAbleToOpenCameraApp() {
         return mIntent != null && isActivityCallable(mIntent);
-    }
-
-    public static boolean isPackageInstalled(Context context, String packageName, boolean ignoreState) {
-        if (packageName != null) {
-            try {
-                PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, 0);
-                if (!pi.applicationInfo.enabled && !ignoreState) {
-                    return false;
-                }
-            } catch (PackageManager.NameNotFoundException e) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public static boolean isPackageInstalled(Context context, String packageName) {
-        return isPackageInstalled(context, packageName, true);
     }
 
     /**
@@ -290,21 +265,6 @@ public class QRCodeScannerController implements
             com.android.internal.R.string.config_defaultQrCodeComponent);
     }
 
-    private Intent getLensIntent() {
-        Intent intent = new Intent();
-        Bundle bundle = new Bundle();
-
-        bundle.putString("caller_package", GSA_PACKAGE);
-        bundle.putLong("start_activity_time_nanos", SystemClock.elapsedRealtimeNanos());
-        intent.setComponent(new ComponentName(GSA_PACKAGE, LENS_ACTIVITY))
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK)
-                .setPackage(GSA_PACKAGE)
-                .setData(Uri.parse("google://lens"))
-                .putExtra("lens_activity_params", bundle);
-
-        return intent;
-    }
-
     private void updateQRCodeScannerActivityDetails() {
         String qrCodeScannerActivity = mDeviceConfigProxy.getString(
                 DeviceConfig.NAMESPACE_SYSTEMUI,
@@ -319,22 +279,16 @@ public class QRCodeScannerController implements
         String prevQrCodeScannerActivity = mQRCodeScannerActivity;
         ComponentName componentName = null;
         Intent intent = new Intent();
-        if (qrCodeScannerActivity != null && !qrCodeScannerActivity.isEmpty()) {
+        if (qrCodeScannerActivity != null) {
             componentName = ComponentName.unflattenFromString(qrCodeScannerActivity);
             intent.setComponent(componentName);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         }
 
-        Intent lensIntent = getLensIntent();
-        if (intent != null && isActivityAvailable(intent)) {
+        if (isActivityAvailable(intent)) {
             mQRCodeScannerActivity = qrCodeScannerActivity;
             mComponentName = componentName;
             mIntent = intent;
-        } else if (isPackageInstalled(mContext, GSA_PACKAGE, false) &&
-                lensIntent != null && isActivityCallable(lensIntent)) {
-            mQRCodeScannerActivity = LENS_ACTIVITY;
-            mComponentName = lensIntent.getComponent();
-            mIntent = lensIntent;
         } else {
             mQRCodeScannerActivity = null;
             mComponentName = null;
