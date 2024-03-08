@@ -97,6 +97,11 @@ public class NavigationBarInflaterView extends FrameLayout
     private static final String OVERLAY_NAVIGATION_HIDE_HINT =
             "org.lineageos.overlay.customization.navbar.nohint";
 
+    private static final String KEY_NAVIGATION_HINT_KEYBOARD =
+            "system:" + Settings.System.NAVIGATION_BAR_HINT_KEYBOARD;
+    private static final String OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD =
+            "com.kusumaos.overlay.customization.navbar.nokeyboardhint";
+
     protected LayoutInflater mLayoutInflater;
     protected LayoutInflater mLandscapeInflater;
 
@@ -118,6 +123,7 @@ public class NavigationBarInflaterView extends FrameLayout
 
     private boolean mInverseLayout;
     private boolean mIsHintEnabled;
+    private boolean mIsKeyboardHintEnabled;
 
     public NavigationBarInflaterView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -177,6 +183,7 @@ public class NavigationBarInflaterView extends FrameLayout
         super.onAttachedToWindow();
         Dependency.get(TunerService.class).addTunable(this, NAV_BAR_INVERSE);
         Dependency.get(TunerService.class).addTunable(this, KEY_NAVIGATION_HINT);
+        Dependency.get(TunerService.class).addTunable(this, KEY_NAVIGATION_HINT_KEYBOARD);
     }
 
     @Override
@@ -195,6 +202,9 @@ public class NavigationBarInflaterView extends FrameLayout
             mIsHintEnabled = TunerService.parseIntegerSwitch(newValue, true);
             updateHint();
             onLikelyDefaultLayoutChange();
+        } else if (KEY_NAVIGATION_HINT_KEYBOARD.equals(key)) {
+            mIsKeyboardHintEnabled = TunerService.parseIntegerSwitch(newValue, true);
+            updateHint();
         }
     }
 
@@ -262,16 +272,21 @@ public class NavigationBarInflaterView extends FrameLayout
                 ServiceManager.getService(Context.OVERLAY_SERVICE));
         final boolean state = mNavBarMode == NAV_BAR_MODE_GESTURAL && !mIsHintEnabled;
         final int userId = ActivityManager.getCurrentUser();
+        String overlay = mIsKeyboardHintEnabled ? OVERLAY_NAVIGATION_HIDE_HINT :
+                OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD;
         try {
-            iom.setEnabled(OVERLAY_NAVIGATION_HIDE_HINT, state, userId);
+            iom.setEnabled(OVERLAY_NAVIGATION_HIDE_HINT, state && 
+                    mIsKeyboardHintEnabled, userId);
+            iom.setEnabled(OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD, state && 
+                    !mIsKeyboardHintEnabled, userId);
             if (state) {
                 // As overlays are also used to apply navigation mode, it is needed to set
                 // our customization overlay to highest priority to ensure it is applied.
-                iom.setHighestPriority(OVERLAY_NAVIGATION_HIDE_HINT, userId);
+                iom.setHighestPriority(overlay, userId);
             }
         } catch (IllegalArgumentException | RemoteException e) {
             Log.e(TAG, "Failed to " + (state ? "enable" : "disable")
-                    + " overlay " + OVERLAY_NAVIGATION_HIDE_HINT + " for user " + userId);
+                    + " overlay " + overlay + " for user " + userId);
         }
     }
 
