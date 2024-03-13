@@ -325,6 +325,8 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     // Number of animating rows
     private int mAnimatingRows = 0;
 
+    private boolean mLinkedNotification;
+
     @VisibleForTesting
     int mVolumeRingerIconDrawableId;
     @VisibleForTesting
@@ -796,6 +798,12 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                 if (mVoiceCapable) {
                     addRow(AudioManager.STREAM_RING, R.drawable.ic_volume_ringer_unlinked,
                             R.drawable.ic_volume_ringer_mute_unlinked, true, false);
+                    if (findRow(AudioManager.STREAM_NOTIFICATION) == null && !mLinkedNotification) {
+                        addRow(AudioManager.STREAM_NOTIFICATION, R.drawable.ic_volume_notification,
+                                R.drawable.ic_volume_notification_mute, true, false);
+                    } else if (findRow(AudioManager.STREAM_NOTIFICATION) != null && mLinkedNotification) {
+                        removeRow(findRow(AudioManager.STREAM_NOTIFICATION));
+                    }
                 } else {
                     addRow(AudioManager.STREAM_RING, R.drawable.ic_volume_notification,
                             R.drawable.ic_volume_notification_mute, true, false);
@@ -1831,7 +1839,7 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     private boolean isExpandableRowH(VolumeRow row) {
         return row != null && row != mDefaultRow && !row.defaultStream
                 && (row.stream == STREAM_RING
-                        || (row.stream == STREAM_NOTIFICATION && !mState.linkedNotification)
+                        || (row.stream == STREAM_NOTIFICATION && !mLinkedNotification)
                         || row.stream == STREAM_ALARM
                         || row.stream == STREAM_MUSIC);
     }
@@ -2215,12 +2223,10 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
     }
 
     private void updateNotificationRowH() {
-        VolumeRow notificationRow = findRow(AudioManager.STREAM_NOTIFICATION);
-        if (notificationRow != null && mState.linkedNotification) {
-            removeRow(notificationRow);
-        } else if (notificationRow == null && !mState.linkedNotification) {
-            addRow(AudioManager.STREAM_NOTIFICATION, R.drawable.ic_volume_notification,
-                    R.drawable.ic_volume_notification_mute, true, false);
+        if (mState.linkedNotification) {
+            mLinkedNotification = true;
+        } else {
+            mLinkedNotification = false;
         }
     }
 
