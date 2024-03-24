@@ -33,11 +33,14 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.ContentObserver;
 import android.graphics.drawable.AnimatedVectorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.RemoteException;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -106,6 +109,7 @@ public class RotationButtonController {
     private boolean mSkipOverrideUserLockPrefsOnce;
     private final int mLightIconColor;
     private final int mDarkIconColor;
+    private boolean mButtonEnabled = true;
 
     @DrawableRes
     private final int mIconCcwStart0ResId;
@@ -174,6 +178,21 @@ public class RotationButtonController {
         mAccessibilityManager = AccessibilityManager.getInstance(context);
         mTaskStackListener = new TaskStackListenerImpl();
         mWindowRotationProvider = windowRotationProvider;
+
+        mButtonEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+            Settings.System.ENABLE_ROTATION_BUTTON, 1, UserHandle.USER_CURRENT) == 1;
+        mContext.getContentResolver().registerContentObserver(
+            Settings.System.getUriFor(Settings.System.ENABLE_ROTATION_BUTTON), false,
+            new ContentObserver(mMainThreadHandler) {
+                @Override
+                public void onChange(boolean selfChange, Uri uri) {
+                    if (uri.getLastPathSegment().equals(Settings.System.ENABLE_ROTATION_BUTTON)) {
+                        mButtonEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.ENABLE_ROTATION_BUTTON, 1, UserHandle.USER_CURRENT) == 1;
+                    }
+                }
+            }
+        );
     }
 
     public void setRotationButton(RotationButton rotationButton,
@@ -376,7 +395,7 @@ public class RotationButtonController {
     public void onRotationProposal(int rotation, boolean isValid) {
         int windowRotation = mWindowRotationProvider.get();
 
-        if (!mRotationButton.acceptRotationProposal()) {
+        if (!mButtonEnabled || !mRotationButton.acceptRotationProposal()) {
             return;
         }
 
