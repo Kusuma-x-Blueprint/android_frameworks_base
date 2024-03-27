@@ -103,6 +103,7 @@ constructor(
     private val metricsLogger: MetricsLogger,
     private val uiEventLogger: UiEventLogger,
     private val deviceProvisionedController: DeviceProvisionedController,
+    private val qsPanelController: QSPanelController,
     private val qsSecurityFooterUtils: QSSecurityFooterUtils,
     private val fgsManagerController: FgsManagerController,
     private val userInteractor: UserInteractor,

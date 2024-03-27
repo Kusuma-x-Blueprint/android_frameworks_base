@@ -137,6 +137,24 @@ class FooterActionsViewModel(
             }
             .distinctUntilChanged()
 
+    /** The model for the edit button. */
+    val edit: FooterActionsButtonViewModel =
+        FooterActionsButtonViewModel(
+            id = R.id.edit,
+            Icon.Resource(
+                R.drawable.ic_mode_edit,
+                ContentDescription.Resource(R.string.accessibility_quick_settings_edit)
+            ),
+            iconTint =
+                Utils.getColorAttrDefaultColor(
+                    context,
+                    com.android.internal.R.attr.textColorPrimary,
+                ),
+            backgroundColor = R.attr.offStateColor,
+            this::onEditButtonClicked,
+            this::doNothingLongClick
+        )
+
     /** The model for the settings button. */
     val settings: FooterActionsButtonViewModel =
         FooterActionsButtonViewModel(
@@ -237,6 +255,14 @@ class FooterActionsViewModel(
         }
 
         footerActionsInteractor.showUserSwitcher(expandable)
+    }
+
+    private fun onEditButtonClicked(expandable: Expandable) {
+        if (falsingManager.isFalseTap(FalsingManager.LOW_PENALTY)) {
+            return
+        }
+
+        footerActionsInteractor.showEdit(expandable)
     }
 
     private fun onSettingsButtonClicked(expandable: Expandable) {

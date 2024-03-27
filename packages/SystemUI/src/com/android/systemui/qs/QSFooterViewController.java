@@ -29,8 +29,6 @@ import com.android.internal.jank.InteractionJankMonitor;
 
 import com.android.systemui.R;
 import com.android.systemui.animation.ActivityLaunchAnimator;
-import com.android.systemui.plugins.ActivityStarter;
-import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.qs.dagger.QSScope;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.util.ViewController;
@@ -48,21 +46,14 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
 
     private final TextView mUsageText;
     private final PageIndicator mPageIndicator;
-    private final View mEditButton;
-    private final FalsingManager mFalsingManager;
-    private final ActivityStarter mActivityStarter;
 
     @Inject
     QSFooterViewController(QSFooterView view,
             UserTracker userTracker,
-            FalsingManager falsingManager,
-            ActivityStarter activityStarter,
             QSPanelController qsPanelController) {
         super(view);
         mUserTracker = userTracker;
         mQsPanelController = qsPanelController;
-        mFalsingManager = falsingManager;
-        mActivityStarter = activityStarter;
 
         mUsageText = mView.findViewById(R.id.build);
         mPageIndicator = mView.findViewById(R.id.footer_page_indicator);
@@ -71,13 +62,6 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
 
     @Override
     protected void onViewAttached() {
-        mEditButton.setOnClickListener(view -> {
-            if (mFalsingManager.isFalseTap(FalsingManager.LOW_PENALTY)) {
-                return;
-            }
-            mActivityStarter
-                    .postQSRunnableDismissingKeyguard(() -> mQsPanelController.showEdit(view));
-        });
         mUsageText.setOnClickListener(view -> {
             Intent nIntent = new Intent(Intent.ACTION_MAIN);
             nIntent.setClassName("com.android.settings",
@@ -94,7 +78,6 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
     @Override
     public void setVisibility(int visibility) {
         mView.setVisibility(visibility);
-        mEditButton.setClickable(visibility == View.VISIBLE);
     }
 
     @Override
