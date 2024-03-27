@@ -24,8 +24,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.systemui.R;
-import com.android.systemui.plugins.ActivityStarter;
-import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.qs.dagger.QSScope;
 import com.android.systemui.settings.UserTracker;
 import com.android.systemui.util.ViewController;
@@ -42,25 +40,17 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
     private final QSPanelController mQsPanelController;
     private final TextView mBuildText;
     private final PageIndicator mPageIndicator;
-    private final View mEditButton;
-    private final FalsingManager mFalsingManager;
-    private final ActivityStarter mActivityStarter;
 
     @Inject
     QSFooterViewController(QSFooterView view,
             UserTracker userTracker,
-            FalsingManager falsingManager,
-            ActivityStarter activityStarter,
             QSPanelController qsPanelController) {
         super(view);
         mUserTracker = userTracker;
         mQsPanelController = qsPanelController;
-        mFalsingManager = falsingManager;
-        mActivityStarter = activityStarter;
 
         mBuildText = mView.findViewById(R.id.build);
         mPageIndicator = mView.findViewById(R.id.footer_page_indicator);
-        mEditButton = mView.findViewById(android.R.id.edit);
     }
 
     @Override
@@ -79,13 +69,6 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
             return false;
         });
 
-        mEditButton.setOnClickListener(view -> {
-            if (mFalsingManager.isFalseTap(FalsingManager.LOW_PENALTY)) {
-                return;
-            }
-            mActivityStarter
-                    .postQSRunnableDismissingKeyguard(() -> mQsPanelController.showEdit(view));
-        });
         mQsPanelController.setFooterPageIndicator(mPageIndicator);
         mView.updateEverything();
     }
@@ -96,7 +79,6 @@ public class QSFooterViewController extends ViewController<QSFooterView> impleme
     @Override
     public void setVisibility(int visibility) {
         mView.setVisibility(visibility);
-        mEditButton.setClickable(visibility == View.VISIBLE);
     }
 
     @Override

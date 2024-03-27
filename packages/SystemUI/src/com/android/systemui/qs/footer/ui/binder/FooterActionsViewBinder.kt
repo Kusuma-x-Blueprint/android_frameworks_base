@@ -68,11 +68,13 @@ object FooterActionsViewBinder {
         val securityHolder = TextButtonViewHolder.createAndAdd(inflater, view)
         val foregroundServicesWithTextHolder = TextButtonViewHolder.createAndAdd(inflater, view)
         val foregroundServicesWithNumberHolder = NumberButtonViewHolder.createAndAdd(inflater, view)
+        val editHolder = IconButtonViewHolder.createAndAdd(inflater, view, isLast = false)
         val userSwitcherHolder = IconButtonViewHolder.createAndAdd(inflater, view, isLast = false)
         val settingsHolder =
             IconButtonViewHolder.createAndAdd(inflater, view, isLast = viewModel.power == null)
 
-        // Bind the static power and settings buttons.
+        // Bind the static edit, power and settings buttons.
+        bindButton(editHolder, viewModel.edit)
         bindButton(settingsHolder, viewModel.settings)
 
         if (viewModel.power != null) {
@@ -244,7 +246,14 @@ object FooterActionsViewBinder {
                 else -> error("Unsupported icon background resource ${model.backgroundColor}")
             }
         buttonView.setBackgroundResource(backgroundResource)
-        buttonView.setOnClickListener { model.onClick(Expandable.fromView(buttonView)) }
+
+        buttonView.setOnClickListener { 
+            when {
+                model.onClick != null -> model.onClick.invoke(Expandable.fromView(buttonView))
+                model.onClickView != null -> model.onClickView.invoke(buttonView)
+                else -> error("No click handler provided")
+            }
+        }
 
         val icon = model.icon
         val iconView = button.icon

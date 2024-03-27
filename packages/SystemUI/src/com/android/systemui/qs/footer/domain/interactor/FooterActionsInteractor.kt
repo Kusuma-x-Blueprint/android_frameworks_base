@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.UserHandle
 import android.provider.Settings
+import android.view.View
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.internal.logging.MetricsLogger
 import com.android.internal.logging.UiEventLogger
@@ -32,6 +33,7 @@ import com.android.systemui.animation.Expandable
 import com.android.systemui.broadcast.BroadcastDispatcher
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Background
+import com.android.systemui.statusbar.phone.CentralSurfaces
 import com.android.systemui.globalactions.GlobalActionsDialogLite
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.qs.FgsManagerController
@@ -43,6 +45,7 @@ import com.android.systemui.qs.footer.domain.model.SecurityButtonConfig
 import com.android.systemui.security.data.repository.SecurityRepository
 import com.android.systemui.statusbar.policy.DeviceProvisionedController
 import com.android.systemui.user.domain.interactor.UserInteractor
+import java.util.Optional
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -90,6 +93,9 @@ interface FooterActionsInteractor {
 
     /** Show the user switcher. */
     fun showUserSwitcher(expandable: Expandable)
+
+    /** Show the edit QS. */
+    fun showEdit(view: View)
 }
 
 @SysUISingleton
@@ -103,6 +109,7 @@ constructor(
     private val qsSecurityFooterUtils: QSSecurityFooterUtils,
     private val fgsManagerController: FgsManagerController,
     private val userInteractor: UserInteractor,
+    private val centralSurfacesOptional: Optional<CentralSurfaces>,
     securityRepository: SecurityRepository,
     foregroundServicesRepository: ForegroundServicesRepository,
     userSwitcherRepository: UserSwitcherRepository,
@@ -179,5 +186,11 @@ constructor(
 
     override fun showUserSwitcher(expandable: Expandable) {
         userInteractor.showUserSwitcher(expandable)
+    }
+
+    override fun showEdit(view: View) {
+        activityStarter.postQSRunnableDismissingKeyguard {
+            centralSurfacesOptional.ifPresent { it.getQSPanelController().showEdit(view) }
+        }
     }
 }
