@@ -20,19 +20,10 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.IdRes
 import android.app.StatusBarManager
-import android.content.Context
-import android.content.Intent
-import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.os.Trace
 import android.os.Trace.TRACE_TAG_APP
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.provider.AlarmClock
-import android.provider.CalendarContract
 import android.util.Pair
 import android.view.DisplayCutout
 import android.view.View
@@ -50,22 +41,22 @@ import com.android.systemui.battery.BatteryMeterViewController
 import com.android.systemui.demomode.DemoMode
 import com.android.systemui.demomode.DemoModeController
 import com.android.systemui.dump.DumpManager
-import com.android.systemui.plugins.ActivityStarter
+import com.android.systemui.flags.FeatureFlags
+import com.android.systemui.flags.Flags
 import com.android.systemui.qs.ChipVisibilityListener
 import com.android.systemui.qs.HeaderPrivacyIconsController
 import com.android.systemui.qs.carrier.QSCarrierGroup
 import com.android.systemui.qs.carrier.QSCarrierGroupController
-import com.android.systemui.shade.ShadeHeaderController.Companion.HEADER_TRANSITION_ID
-import com.android.systemui.shade.ShadeHeaderController.Companion.LARGE_SCREEN_HEADER_CONSTRAINT
-import com.android.systemui.shade.ShadeHeaderController.Companion.LARGE_SCREEN_HEADER_TRANSITION_ID
-import com.android.systemui.shade.ShadeHeaderController.Companion.QQS_HEADER_CONSTRAINT
-import com.android.systemui.shade.ShadeHeaderController.Companion.QS_HEADER_CONSTRAINT
+import com.android.systemui.shade.LargeScreenShadeHeaderController.Companion.HEADER_TRANSITION_ID
+import com.android.systemui.shade.LargeScreenShadeHeaderController.Companion.QQS_HEADER_CONSTRAINT
+import com.android.systemui.shade.LargeScreenShadeHeaderController.Companion.QS_HEADER_CONSTRAINT
 import com.android.systemui.statusbar.phone.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.phone.StatusBarIconController
 import com.android.systemui.statusbar.phone.StatusBarLocation
 import com.android.systemui.statusbar.phone.StatusIconContainer
 import com.android.systemui.statusbar.phone.dagger.CentralSurfacesComponent.CentralSurfacesScope
-import com.android.systemui.statusbar.phone.dagger.StatusBarViewModule.SHADE_HEADER
+import com.android.systemui.statusbar.phone.dagger.StatusBarViewModule.LARGE_SCREEN_BATTERY_CONTROLLER
+import com.android.systemui.statusbar.phone.dagger.StatusBarViewModule.LARGE_SCREEN_SHADE_HEADER
 import com.android.systemui.statusbar.policy.Clock
 import com.android.systemui.statusbar.policy.ConfigurationController
 import com.android.systemui.statusbar.policy.VariableDateView
@@ -76,53 +67,60 @@ import javax.inject.Inject
 import javax.inject.Named
 
 /**
- * Controller for QS header.
+ * Controller for QS header on Large Screen width (large screen + landscape).
  *
- * [header] is a [MotionLayout] that has two transitions:
+ * Additionally, this serves as the staging ground for the combined QS headers. A single
+ * [MotionLayout] that changes constraints depending on the configuration and can animate the
+ * expansion of the headers in small screen portrait.
+ *
+ * [header] will be a [MotionLayout] if [Flags.COMBINED_QS_HEADERS] is enabled. In this case, the
+ * [MotionLayout] has one transitions:
  * * [HEADER_TRANSITION_ID]: [QQS_HEADER_CONSTRAINT] <-> [QS_HEADER_CONSTRAINT] for portrait
  *   handheld device configuration.
- * * [LARGE_SCREEN_HEADER_TRANSITION_ID]: [LARGE_SCREEN_HEADER_CONSTRAINT] for all other
- *   configurations
  */
 @CentralSurfacesScope
-class ShadeHeaderController
-@Inject
-constructor(
-    @Named(SHADE_HEADER) private val header: MotionLayout,
+class LargeScreenShadeHeaderController @Inject constructor(
+    @Named(LARGE_SCREEN_SHADE_HEADER) private val header: View,
     private val statusBarIconController: StatusBarIconController,
     private val tintedIconManagerFactory: StatusBarIconController.TintedIconManager.Factory,
     private val privacyIconsController: HeaderPrivacyIconsController,
     private val insetsProvider: StatusBarContentInsetsProvider,
     private val configurationController: ConfigurationController,
-    private val context: Context,
     private val variableDateViewControllerFactory: VariableDateViewController.Factory,
-    @Named(SHADE_HEADER) private val batteryMeterViewController: BatteryMeterViewController,
+    @Named(LARGE_SCREEN_BATTERY_CONTROLLER)
+    private val batteryMeterViewController: BatteryMeterViewController,
     private val dumpManager: DumpManager,
+    private val featureFlags: FeatureFlags,
     private val qsCarrierGroupControllerBuilder: QSCarrierGroupController.Builder,
     private val combinedShadeHeadersConstraintManager: CombinedShadeHeadersConstraintManager,
     private val demoModeController: DemoModeController,
     private val qsBatteryModeController: QsBatteryModeController,
-    private val activityStarter: ActivityStarter
-) : ViewController<View>(header), Dumpable, View.OnClickListener, View.OnLongClickListener {
+) : ViewController<View>(header), Dumpable {
 
     companion object {
-        /** IDs for transitions and constraints for the [MotionLayout]. */
-        @VisibleForTesting internal val HEADER_TRANSITION_ID = R.id.header_transition
+        /** IDs for transitions and constraints for the [MotionLayout]. These are only used when
+         * [Flags.COMBINED_QS_HEADERS] is enabled.
+         */
+        @VisibleForTesting
+        internal val HEADER_TRANSITION_ID = R.id.header_transition
         @VisibleForTesting
         internal val LARGE_SCREEN_HEADER_TRANSITION_ID = R.id.large_screen_header_transition
-        @VisibleForTesting internal val QQS_HEADER_CONSTRAINT = R.id.qqs_header_constraint
-        @VisibleForTesting internal val QS_HEADER_CONSTRAINT = R.id.qs_header_constraint
+        @VisibleForTesting
+        internal val QQS_HEADER_CONSTRAINT = R.id.qqs_header_constraint
+        @VisibleForTesting
+        internal val QS_HEADER_CONSTRAINT = R.id.qs_header_constraint
         @VisibleForTesting
         internal val LARGE_SCREEN_HEADER_CONSTRAINT = R.id.large_screen_header_constraint
 
-        private fun Int.stateToString() =
-            when (this) {
-                QQS_HEADER_CONSTRAINT -> "QQS Header"
-                QS_HEADER_CONSTRAINT -> "QS Header"
-                LARGE_SCREEN_HEADER_CONSTRAINT -> "Large Screen Header"
-                else -> "Unknown state $this"
-            }
+        private fun Int.stateToString() = when (this) {
+            QQS_HEADER_CONSTRAINT -> "QQS Header"
+            QS_HEADER_CONSTRAINT -> "QS Header"
+            LARGE_SCREEN_HEADER_CONSTRAINT -> "Large Screen Header"
+            else -> "Unknown state $this"
+        }
     }
+
+    private val combinedHeaders = featureFlags.isEnabled(Flags.COMBINED_QS_HEADERS)
 
     private lateinit var iconManager: StatusBarIconController.TintedIconManager
     private lateinit var carrierIconSlots: List<String>
@@ -133,14 +131,11 @@ constructor(
     private val date: TextView = header.findViewById(R.id.date)
     private val iconContainer: StatusIconContainer = header.findViewById(R.id.statusIcons)
     private val qsCarrierGroup: QSCarrierGroup = header.findViewById(R.id.carrier_group)
-    private val vibrator: Vibrator = header.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     private var roundedCorners = 0
     private var cutout: DisplayCutout? = null
     private var lastInsets: WindowInsets? = null
-    private var textColorPrimary = Color.TRANSPARENT
 
-    private var privacyChipVisible = false
     private var qsDisabled = false
     private var visible = false
         set(value) {
@@ -185,17 +180,20 @@ constructor(
             onHeaderStateChanged()
         }
 
-    /** Expansion fraction of the QQS/QS shade. This is not the expansion between QQS <-> QS. */
+    /**
+     * Expansion fraction of the QQS/QS shade. This is not the expansion between QQS <-> QS.
+     */
     var shadeExpandedFraction = -1f
         set(value) {
             if (qsVisible && field != value) {
                 header.alpha = ShadeInterpolation.getContentAlpha(value)
                 field = value
-                updateVisibility()
             }
         }
 
-    /** Expansion fraction of the QQS <-> QS animation. */
+    /**
+     * Expansion fraction of the QQS <-> QS animation.
+     */
     var qsExpandedFraction = -1f
         set(value) {
             if (visible && field != value) {
@@ -204,7 +202,9 @@ constructor(
             }
         }
 
-    /** Current scroll of QS. */
+    /**
+     * Current scroll of QS.
+     */
     var qsScrollY = 0
         set(value) {
             if (field != value) {
@@ -213,43 +213,40 @@ constructor(
             }
         }
 
-    private val insetListener =
-        View.OnApplyWindowInsetsListener { view, insets ->
-            updateConstraintsForInsets(view as MotionLayout, insets)
-            lastInsets = WindowInsets(insets)
+    private val insetListener = View.OnApplyWindowInsetsListener { view, insets ->
+        updateConstraintsForInsets(view as MotionLayout, insets)
+        lastInsets = WindowInsets(insets)
 
-            view.onApplyWindowInsets(insets)
-        }
+        view.onApplyWindowInsets(insets)
+    }
 
-    private val demoModeReceiver =
-        object : DemoMode {
-            override fun demoCommands() = listOf(DemoMode.COMMAND_CLOCK)
-            override fun dispatchDemoCommand(command: String, args: Bundle) =
-                clock.dispatchDemoCommand(command, args)
-            override fun onDemoModeStarted() = clock.onDemoModeStarted()
-            override fun onDemoModeFinished() = clock.onDemoModeFinished()
-        }
+    private val demoModeReceiver = object : DemoMode {
+        override fun demoCommands() = listOf(DemoMode.COMMAND_CLOCK)
+        override fun dispatchDemoCommand(command: String, args: Bundle) =
+            clock.dispatchDemoCommand(command, args)
+        override fun onDemoModeStarted() = clock.onDemoModeStarted()
+        override fun onDemoModeFinished() = clock.onDemoModeFinished()
+    }
 
-    private val chipVisibilityListener: ChipVisibilityListener =
-        object : ChipVisibilityListener {
-            override fun onChipVisibilityRefreshed(visible: Boolean) {
+    private val chipVisibilityListener: ChipVisibilityListener = object : ChipVisibilityListener {
+        override fun onChipVisibilityRefreshed(visible: Boolean) {
+            if (header is MotionLayout) {
                 // If the privacy chip is visible, we hide the status icons and battery remaining
                 // icon, only in QQS.
-                val update =
-                    combinedShadeHeadersConstraintManager.privacyChipVisibilityConstraints(visible)
+                val update = combinedShadeHeadersConstraintManager
+                    .privacyChipVisibilityConstraints(visible)
                 header.updateAllConstraints(update)
-                privacyChipVisible = visible
-                setBatteryClickable(qsExpandedFraction == 1f || !visible)
             }
         }
+    }
 
     private val configurationControllerListener =
         object : ConfigurationController.ConfigurationListener {
-            override fun onConfigChanged(newConfig: Configuration?) {
-                val left =
-                    header.resources.getDimensionPixelSize(
-                        R.dimen.large_screen_shade_header_left_padding
-                    )
+        override fun onConfigChanged(newConfig: Configuration?) {
+            if (header !is MotionLayout) {
+                val left = header.resources.getDimensionPixelSize(
+                    R.dimen.large_screen_shade_header_left_padding
+                )
                 header.setPadding(
                     left,
                     header.paddingTop,
@@ -257,29 +254,26 @@ constructor(
                     header.paddingBottom
                 )
             }
-
-            override fun onDensityOrFontScaleChanged() {
-                loadConstraints()
-                header.minHeight =
-                    resources.getDimensionPixelSize(R.dimen.large_screen_shade_header_min_height)
-                lastInsets?.let { updateConstraintsForInsets(header, it) }
-                onThemeChanged()
-            }
-
-            override fun onUiModeChanged() {
-                updateResources()
-            }
-
-            override fun onThemeChanged() {
-                clock.setTextAppearance(R.style.TextAppearance_QS_Status)
-                date.setTextAppearance(R.style.TextAppearance_QS_Status)
-                qsCarrierGroup.updateTextAppearance(R.style.TextAppearance_QS_Status_Carriers)
-                updateResources()
-            }
         }
 
+        override fun onDensityOrFontScaleChanged() {
+            clock.setTextAppearance(R.style.TextAppearance_QS_Status)
+            date.setTextAppearance(R.style.TextAppearance_QS_Status)
+            qsCarrierGroup.updateTextAppearance(R.style.TextAppearance_QS_Status_Carriers)
+            if (header is MotionLayout) {
+                loadConstraints()
+                header.minHeight = resources
+                        .getDimensionPixelSize(R.dimen.large_screen_shade_header_min_height)
+                lastInsets?.let { updateConstraintsForInsets(header, it) }
+            }
+            updateResources()
+        }
+    }
+
     override fun onInit() {
-        variableDateViewControllerFactory.create(date as VariableDateView).init()
+        if (header is MotionLayout) {
+            variableDateViewControllerFactory.create(date as VariableDateView).init()
+        }
         batteryMeterViewController.init()
 
         // battery settings same as in QS icons
@@ -292,44 +286,20 @@ constructor(
 
         carrierIconSlots =
             listOf(header.context.getString(com.android.internal.R.string.status_bar_mobile))
+        qsCarrierGroupController = qsCarrierGroupControllerBuilder
+            .setQSCarrierGroup(qsCarrierGroup)
+            .build()
 
-        qsCarrierGroupController =
-            qsCarrierGroupControllerBuilder.setQSCarrierGroup(qsCarrierGroup).build()
-
-        privacyIconsController.onParentVisible()
-
-        // click actions
-        clock.setOnClickListener(this)
-        date.setOnClickListener(this)
-        setBatteryClickable(true)
-    }
-
-    override fun onClick(v: View) {
-        if (v == clock) {
-            activityStarter.postStartActivityDismissingKeyguard(Intent(
-                    AlarmClock.ACTION_SHOW_ALARMS), 0)
-        } else if (v == date) {
-            val builder: Uri.Builder = CalendarContract.CONTENT_URI.buildUpon()
-            builder.appendPath("time")
-            builder.appendPath(System.currentTimeMillis().toString())
-            val todayIntent: Intent = Intent(Intent.ACTION_VIEW, builder.build())
-            activityStarter.postStartActivityDismissingKeyguard(todayIntent, 0)
-        } else if (v == batteryIcon) {
-            activityStarter.postStartActivityDismissingKeyguard(Intent(
-                    Intent.ACTION_POWER_USAGE_SUMMARY), 0)
+        if (!combinedHeaders) {
+            // In the new header, we display alarm icon but we ignore it when not using the new
+            // headers.
+            iconContainer.addIgnoredSlot(
+                    context.getString(com.android.internal.R.string.status_bar_alarm_clock)
+            )
         }
-    }
-
-    override fun onLongClick(v: View): Boolean {
-        if (v == clock || v == date) {
-            val nIntent: Intent = Intent(Intent.ACTION_MAIN)
-            nIntent.setClassName("com.android.settings",
-                    "com.android.settings.Settings\$DateTimeSettingsActivity")
-            activityStarter.startActivity(nIntent, true /* dismissShade */)
-            vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            return true
+        if (combinedHeaders) {
+            privacyIconsController.onParentVisible()
         }
-        return false
     }
 
     override fun onViewAttached() {
@@ -337,21 +307,22 @@ constructor(
         updateVisibility()
         updateTransition()
 
-        header.setOnApplyWindowInsetsListener(insetListener)
+        if (header is MotionLayout) {
+            header.setOnApplyWindowInsetsListener(insetListener)
 
-        clock.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
-            val newPivot = if (v.isLayoutRtl) v.width.toFloat() else 0f
-            v.pivotX = newPivot
-            v.pivotY = v.height.toFloat() / 2
+            clock.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+                val newPivot = if (v.isLayoutRtl) v.width.toFloat() else 0f
+                v.pivotX = newPivot
+                v.pivotY = v.height.toFloat() / 2
 
-            qsCarrierGroup.setPaddingRelative((v.width * v.scaleX).toInt(), 0, 0, 0)
+                qsCarrierGroup.setPaddingRelative((v.width * v.scaleX).toInt(), 0, 0, 0)
+            }
         }
 
         dumpManager.registerDumpable(this)
         configurationController.addCallback(configurationControllerListener)
         demoModeController.addCallback(demoModeReceiver)
         statusBarIconController.addIconGroup(iconManager)
-        updateResources()
     }
 
     override fun onViewDetached() {
@@ -370,30 +341,30 @@ constructor(
     }
 
     fun startCustomizingAnimation(show: Boolean, duration: Long) {
-        header
-            .animate()
-            .setDuration(duration)
-            .alpha(if (show) 0f else 1f)
-            .setInterpolator(if (show) Interpolators.ALPHA_OUT else Interpolators.ALPHA_IN)
-            .setListener(CustomizerAnimationListener(show))
-            .start()
+        header.animate()
+                .setDuration(duration)
+                .alpha(if (show) 0f else 1f)
+                .setInterpolator(if (show) Interpolators.ALPHA_OUT else Interpolators.ALPHA_IN)
+                .setListener(CustomizerAnimationListener(show))
+                .start()
     }
 
     private fun loadConstraints() {
-        // Use resources.getXml instead of passing the resource id due to bug b/205018300
-        header
-            .getConstraintSet(QQS_HEADER_CONSTRAINT)
-            .load(context, resources.getXml(R.xml.qqs_header))
-        header
-            .getConstraintSet(QS_HEADER_CONSTRAINT)
-            .load(context, resources.getXml(R.xml.qs_header))
-        header
-            .getConstraintSet(LARGE_SCREEN_HEADER_CONSTRAINT)
-            .load(context, resources.getXml(R.xml.large_screen_shade_header))
+        if (header is MotionLayout) {
+            // Use resources.getXml instead of passing the resource id due to bug b/205018300
+            header.getConstraintSet(QQS_HEADER_CONSTRAINT)
+                    .load(context, resources.getXml(R.xml.qqs_header))
+            header.getConstraintSet(QS_HEADER_CONSTRAINT)
+                    .load(context, resources.getXml(R.xml.qs_header))
+            header.getConstraintSet(LARGE_SCREEN_HEADER_CONSTRAINT)
+                    .load(context, resources.getXml(R.xml.large_screen_shade_header))
+        }
     }
 
     private fun updateConstraintsForInsets(view: MotionLayout, insets: WindowInsets) {
-        val cutout = insets.displayCutout.also { this.cutout = it }
+        val cutout = insets.displayCutout.also {
+            this.cutout = it
+        }
 
         val sbInsets: Pair<Int, Int> = insetsProvider.getStatusBarContentInsetsForCurrentRotation()
         val cutoutLeft = sbInsets.first
@@ -402,8 +373,8 @@ constructor(
         updateQQSPaddings()
         // Set these guides as the left/right limits for content that lives in the top row, using
         // cutoutLeft and cutoutRight
-        var changes =
-            combinedShadeHeadersConstraintManager.edgesGuidelinesConstraints(
+        var changes = combinedShadeHeadersConstraintManager
+            .edgesGuidelinesConstraints(
                 if (view.isLayoutRtl) cutoutRight else cutoutLeft,
                 header.paddingStart,
                 if (view.isLayoutRtl) cutoutLeft else cutoutRight,
@@ -415,14 +386,13 @@ constructor(
             if (topCutout.isEmpty || hasCornerCutout) {
                 changes += combinedShadeHeadersConstraintManager.emptyCutoutConstraints()
             } else {
-                changes +=
-                    combinedShadeHeadersConstraintManager.centerCutoutConstraints(
-                        view.isLayoutRtl,
-                        (view.width - view.paddingLeft - view.paddingRight - topCutout.width()) / 2
-                    )
+                changes += combinedShadeHeadersConstraintManager.centerCutoutConstraints(
+                    view.isLayoutRtl,
+                    (view.width - view.paddingLeft - view.paddingRight - topCutout.width()) / 2
+                )
             }
         } else {
-            changes += combinedShadeHeadersConstraintManager.emptyCutoutConstraints()
+           changes += combinedShadeHeadersConstraintManager.emptyCutoutConstraints()
         }
 
         view.updateAllConstraints(changes)
@@ -436,7 +406,7 @@ constructor(
     }
 
     private fun updateScrollY() {
-        if (!largeScreenActive) {
+        if (!largeScreenActive && combinedHeaders) {
             header.scrollY = qsScrollY
         }
     }
@@ -452,6 +422,12 @@ constructor(
     }
 
     private fun onHeaderStateChanged() {
+        if (largeScreenActive || combinedHeaders) {
+            privacyIconsController.onParentVisible()
+        } else {
+            privacyIconsController.onParentInvisible()
+        }
+        updateVisibility()
         updateTransition()
     }
 
@@ -460,14 +436,13 @@ constructor(
      * be visible any time the QQS/QS shade is open.
      */
     private fun updateVisibility() {
-        val visibility =
-            if (qsDisabled) {
-                View.GONE
-            } else if (qsVisible && !customizing) {
-                View.VISIBLE
-            } else {
-                View.INVISIBLE
-            }
+        val visibility = if (!largeScreenActive && !combinedHeaders || qsDisabled) {
+            View.GONE
+        } else if (qsVisible && !customizing) {
+            View.VISIBLE
+        } else {
+            View.INVISIBLE
+        }
         if (header.visibility != visibility) {
             header.visibility = visibility
             visible = visibility == View.VISIBLE
@@ -475,6 +450,10 @@ constructor(
     }
 
     private fun updateTransition() {
+        if (!combinedHeaders) {
+            return
+        }
+        header as MotionLayout
         if (largeScreenActive) {
             logInstantEvent("Large screen constraints set")
             header.setTransition(LARGE_SCREEN_HEADER_TRANSITION_ID)
@@ -488,16 +467,19 @@ constructor(
     }
 
     private fun updatePosition() {
-        if (!largeScreenActive && visible) {
+        if (header is MotionLayout && !largeScreenActive && visible) {
             logInstantEvent("updatePosition: $qsExpandedFraction")
             header.progress = qsExpandedFraction
             updateBatteryMode()
         }
-        setBatteryClickable(qsExpandedFraction == 1f || !privacyChipVisible)
     }
 
     private fun logInstantEvent(message: String) {
-        Trace.instantForTrack(TRACE_TAG_APP, "LargeScreenHeaderController", message)
+        Trace.instantForTrack(
+                TRACE_TAG_APP,
+                "LargeScreenHeaderController",
+                message
+        )
     }
 
     private fun updateListeners() {
@@ -524,41 +506,21 @@ constructor(
         header.setPadding(padding, header.paddingTop, padding, header.paddingBottom)
         updateQQSPaddings()
         qsBatteryModeController.updateResources()
-
-        val fillColor = Utils.getColorAttrDefaultColor(context, android.R.attr.textColorPrimary)
-        iconManager.setTint(fillColor)
-        val textColor = Utils.getColorAttrDefaultColor(context, android.R.attr.textColorPrimary)
-        val colorStateList = Utils.getColorAttr(context, android.R.attr.textColorPrimary)
-        if (textColor != textColorPrimary) {
-            val textColorSecondary = Utils.getColorAttrDefaultColor(context,
-                    android.R.attr.textColorSecondary)
-            textColorPrimary = textColor
-            if (iconManager != null) {
-                iconManager.setTint(textColor)
-            }
-            clock.setTextColor(textColorPrimary)
-            date.setTextColor(textColorPrimary)
-            qsCarrierGroup.updateColors(textColorPrimary, colorStateList)
-            batteryIcon.updateColors(textColorPrimary, textColorSecondary, textColorPrimary)
-        }
     }
 
     private fun updateQQSPaddings() {
-        val clockPaddingStart =
-            resources.getDimensionPixelSize(R.dimen.status_bar_left_clock_starting_padding)
-        val clockPaddingEnd =
-            resources.getDimensionPixelSize(R.dimen.status_bar_left_clock_end_padding)
-        clock.setPaddingRelative(
-            clockPaddingStart,
-            clock.paddingTop,
-            clockPaddingEnd,
-            clock.paddingBottom
-        )
-    }
-
-    private fun setBatteryClickable(clickable: Boolean) {
-        batteryIcon.setOnClickListener(if (clickable) this else null)
-        batteryIcon.setClickable(clickable)
+        if (header is MotionLayout) {
+            val clockPaddingStart = resources
+                .getDimensionPixelSize(R.dimen.status_bar_left_clock_starting_padding)
+            val clockPaddingEnd = resources
+                .getDimensionPixelSize(R.dimen.status_bar_left_clock_end_padding)
+            clock.setPaddingRelative(
+                clockPaddingStart,
+                clock.paddingTop,
+                clockPaddingEnd,
+                clock.paddingBottom
+            )
+        }
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
@@ -568,7 +530,10 @@ constructor(
         pw.println("active: $largeScreenActive")
         pw.println("qsExpandedFraction: $qsExpandedFraction")
         pw.println("qsScrollY: $qsScrollY")
-        pw.println("currentState: ${header.currentState.stateToString()}")
+        if (combinedHeaders) {
+            header as MotionLayout
+            pw.println("currentState: ${header.currentState.stateToString()}")
+        }
     }
 
     private fun MotionLayout.updateConstraints(@IdRes state: Int, update: ConstraintChange) {
@@ -594,10 +559,11 @@ constructor(
         }
     }
 
-    @VisibleForTesting internal fun simulateViewDetached() = this.onViewDetached()
+    @VisibleForTesting
+    internal fun simulateViewDetached() = this.onViewDetached()
 
     inner class CustomizerAnimationListener(
-        private val enteringCustomizing: Boolean,
+            private val enteringCustomizing: Boolean,
     ) : AnimatorListenerAdapter() {
         override fun onAnimationEnd(animation: Animator?) {
             super.onAnimationEnd(animation)
