@@ -166,6 +166,8 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
     private final Token mToken;
     private RemoteTransition mRemoteTransition = null;
 
+    private final PowerManagerInternal mPowerManagerInternal;
+
     /** Only use for clean-up after binder death! */
     private SurfaceControl.Transaction mStartTransaction = null;
     private SurfaceControl.Transaction mFinishTransaction = null;
@@ -229,6 +231,8 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
         mToken = new Token(this);
 
         controller.mTransitionTracer.logState(this);
+
+        mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
     }
 
     @Nullable
@@ -411,7 +415,6 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
     }
 
     protected void doActivityBoost() {
-        PowerManagerInternal mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
         if (mPowerManagerInternal != null) {
             mPowerManagerInternal.setPowerBoost(Boost.DISPLAY_UPDATE_IMMINENT, 80);
         }
