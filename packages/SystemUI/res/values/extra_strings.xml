@@ -30,4 +30,10 @@
     <string name="bluetooth_is_off">Bluetooth is off</string>
     <string name="tap_a_device_to_connect">Tap a device to connect</string>
     <string name="pair_new_device">Pair new device</string>
+
+    <!-- Data usage tiles -->
+    <string name="data_usage_tile_title">Data usage</string>
+    <string name="usage_data_default_suffix">Mobile data</string>
+    <string name="usage_wifi_default_suffix">Wi-Fi</string>
+    <string name="usage_data_unknown">Unknown data usage</string>
 </resources>

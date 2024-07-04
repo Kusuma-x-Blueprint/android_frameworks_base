@@ -21,6 +21,7 @@ import com.android.systemui.qs.tiles.AmbientDisplayTile
 import com.android.systemui.qs.tiles.AODTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.CellularTile
+import com.android.systemui.qs.tiles.DataUsageTile
 import com.android.systemui.qs.tiles.HeadsUpTile
 import com.android.systemui.qs.tiles.OneClickBluetoothTile
 import com.android.systemui.qs.tiles.PowerShareTile
@@ -62,6 +63,12 @@ interface LineageModule {
     @IntoMap
     @StringKey(CellularTile.TILE_SPEC)
     fun bindCellularTile(cellularTile: CellularTile): QSTileImpl<*>
+
+    /** Inject DataUsageTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(DataUsageTile.TILE_SPEC)
+    fun bindDataUsageTile(dataUsageTile: DataUsageTile): QSTileImpl<*>
 
     /** Inject HeadsUpTile into tileMap in QSModule */
     @Binds
