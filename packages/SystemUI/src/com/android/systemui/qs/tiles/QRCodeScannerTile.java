@@ -49,6 +49,10 @@ public class QRCodeScannerTile extends QSTileImpl<QSTile.State> {
 
     private static final String TAG = "QRCodeScanner";
 
+    private static final String EXTRA_QR_CODE_SCANNER_PACKAGE = "net.hearnsoft.qrcodescanner";
+    private static final String EXTRA_QR_CODE_SCANNER_INTENT = 
+            "net.hearnsoft.qrcodescanner.SETTINGS";
+
     private final CharSequence mLabel = mContext.getString(R.string.qr_code_scanner_title);
     private final QRCodeScannerController mQRCodeScannerController;
 
@@ -92,7 +96,6 @@ public class QRCodeScannerTile extends QSTileImpl<QSTile.State> {
     @Override
     public State newTileState() {
         State state = new State();
-        state.handlesLongClick = false;
         return state;
     }
 
@@ -140,7 +143,20 @@ public class QRCodeScannerTile extends QSTileImpl<QSTile.State> {
     @Nullable
     @Override
     public Intent getLongClickIntent() {
-        return null;
+        if (mQRCodeScannerController.isPackageInstalled(mContext, 
+                EXTRA_QR_CODE_SCANNER_PACKAGE, false)) {
+            return new Intent(EXTRA_QR_CODE_SCANNER_INTENT);
+        } else {
+            Intent intent = mQRCodeScannerController.getIntent();
+            if (intent == null) {
+                // This should never happen as the fact that we are handling clicks means that the
+                // scanner is available. This is just a safety check.
+                Log.e(TAG, "Expected a non-null intent");
+                return null;
+            }
+            return intent;
+        }
+
     }
 
     @Override
