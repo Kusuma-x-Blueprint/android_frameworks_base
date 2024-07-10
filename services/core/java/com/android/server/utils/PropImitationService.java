@@ -62,6 +62,8 @@ public final class PropImitationService extends SystemService {
     public void onBootPhase(int phase) {
         if (SPOOF_GMS
                 && isAppInstalled("com.google.android.gms")
+                && (isAppInstalled("com.google.android.syncadapters.calendar")
+                || isAppInstalled("com.google.android.syncadapters.contacts"))
                 && phase == PHASE_BOOT_COMPLETED) {
             Log.i(TAG, "Scheduling the service");
             mScheduler.scheduleAtFixedRate(
