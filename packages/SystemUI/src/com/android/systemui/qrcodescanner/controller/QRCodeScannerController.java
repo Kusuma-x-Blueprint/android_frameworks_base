@@ -22,6 +22,7 @@ import android.annotation.IntDef;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.provider.DeviceConfig;
@@ -85,6 +86,9 @@ public class QRCodeScannerController implements
     public static final int QR_CODE_SCANNER_PREFERENCE_CHANGE = 1;
 
     private static final String TAG = "QRCodeScannerController";
+    private static final String EXTRA_QR_CODE_SCANNER_PACKAGE = "net.hearnsoft.qrcodescanner";
+    private static final String EXTRA_QR_CODE_SCANNER_INTENT = 
+            "net.hearnsoft.qrcodescanner/.QRCodeScannerActivity";
 
     private final Context mContext;
     private final Executor mExecutor;
@@ -273,7 +277,11 @@ public class QRCodeScannerController implements
         // "" means either the flags is not available or is set to "", and in both the cases we
         // want to use R.string.config_defaultQrCodeComponent
         if (Objects.equals(qrCodeScannerActivity, "")) {
-            qrCodeScannerActivity = getDefaultScannerActivity();
+            if (isPackageInstalled(mContext, EXTRA_QR_CODE_SCANNER_PACKAGE, false)) {
+                qrCodeScannerActivity = EXTRA_QR_CODE_SCANNER_INTENT;
+            } else {
+                qrCodeScannerActivity = getDefaultScannerActivity();
+            }
         }
 
         String prevQrCodeScannerActivity = mQRCodeScannerActivity;
@@ -323,6 +331,22 @@ public class QRCodeScannerController implements
                 | PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS;
         return !mContext.getPackageManager().queryIntentActivities(intent,
                 flags).isEmpty();
+    }
+
+    public static boolean isPackageInstalled(Context context, String pkg, boolean ignoreState) {
+        if (pkg != null) {
+            try {
+                PackageInfo pi = context.getPackageManager().getPackageInfo(pkg,
+                        PackageManager.PackageInfoFlags.of(0));
+                if (!pi.applicationInfo.enabled && !ignoreState) {
+                    return false;
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void unregisterUserChangeObservers() {
