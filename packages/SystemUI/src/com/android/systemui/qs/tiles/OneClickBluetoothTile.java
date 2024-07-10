@@ -47,7 +47,6 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.qs.tiles.dialog.BluetoothDialogFactory;
 import com.android.systemui.statusbar.policy.BluetoothController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
@@ -56,18 +55,16 @@ import java.util.List;
 import javax.inject.Inject;
 
 /** Quick settings tile: Bluetooth **/
-public class BluetoothTile extends SecureQSTile<BooleanState> {
+public class OneClickBluetoothTile extends SecureQSTile<BooleanState> {
 
-    public static final String TILE_SPEC = "bt";
+    public static final String TILE_SPEC = "1bt";
 
     private static final Intent BLUETOOTH_SETTINGS = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
 
-    private final Handler mHandler;
     private final BluetoothController mController;
-    private final BluetoothDialogFactory mBluetoothDialogFactory;
 
     @Inject
-    public BluetoothTile(
+    public OneClickBluetoothTile(
             QSHost host,
             @Background Looper backgroundLooper,
             @Main Handler mainHandler,
@@ -77,22 +74,17 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
             ActivityStarter activityStarter,
             QSLogger qsLogger,
             BluetoothController bluetoothController,
-            KeyguardStateController keyguardStateController,
-            BluetoothDialogFactory bluetoothDialogFactory
+            KeyguardStateController keyguardStateController
     ) {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger, keyguardStateController);
-        mHandler = mainHandler;
         mController = bluetoothController;
-        mBluetoothDialogFactory = bluetoothDialogFactory;
         mController.observe(getLifecycle(), mCallback);
     }
 
     @Override
     public BooleanState newTileState() {
-        BooleanState s = new BooleanState();
-        s.forceExpandIcon = true;
-        return s;
+        return new BooleanState();
     }
 
     @Override
@@ -100,7 +92,11 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
         if (checkKeyguard(view, keyguardShowing)) {
             return;
         }
-        mHandler.post(() -> mBluetoothDialogFactory.create(true, view));
+        // Secondary clicks are header clicks, just toggle.
+        final boolean isEnabled = mState.value;
+        // Immediately enter transient enabling state when turning bluetooth on.
+        refreshState(isEnabled ? null : ARG_SHOW_TRANSIENT_ENABLING);
+        mController.setBluetoothEnabled(!isEnabled);
     }
 
     @Override
@@ -122,7 +118,7 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
 
     @Override
     public CharSequence getTileLabel() {
-        return mContext.getString(R.string.quick_settings_connected_devices_label);
+        return mContext.getString(R.string.quick_settings_bluetooth_label);
     }
 
     @Override
@@ -140,7 +136,7 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
             state.slash = new SlashState();
         }
         state.slash.isSlashed = !enabled;
-        state.label = mContext.getString(R.string.quick_settings_connected_devices_label);
+        state.label = mContext.getString(R.string.quick_settings_bluetooth_label);
         state.secondaryLabel = TextUtils.emptyIfNull(
                 getSecondaryLabel(enabled, connecting, connected, state.isTransient));
         state.contentDescription = mContext.getString(
@@ -158,16 +154,16 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
                                 + ", " + state.secondaryLabel;
             } else if (state.isTransient) {
                 state.icon = ResourceIcon.get(
-                        R.drawable.qs_connected_devices_icon);
+                        R.drawable.qs_bluetooth_icon_search);
                 state.stateDescription = state.secondaryLabel;
             } else {
                 state.icon =
-                        ResourceIcon.get(R.drawable.qs_connected_devices_icon);
+                        ResourceIcon.get(R.drawable.qs_bluetooth_icon_off);
                 state.stateDescription = mContext.getString(R.string.accessibility_not_connected);
             }
             state.state = Tile.STATE_ACTIVE;
         } else {
-            state.icon = ResourceIcon.get(R.drawable.qs_connected_devices_icon);
+            state.icon = ResourceIcon.get(R.drawable.qs_bluetooth_icon_off);
             state.state = Tile.STATE_INACTIVE;
         }
 
@@ -234,7 +230,7 @@ public class BluetoothTile extends SecureQSTile<BooleanState> {
 
     @Override
     public int getMetricsCategory() {
-        return MetricsEvent.QS_BLUETOOTH;
+        return MetricsEvent.EXTRA_METRICS;
     }
 
     @Override

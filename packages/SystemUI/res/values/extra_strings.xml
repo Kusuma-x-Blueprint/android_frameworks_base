@@ -26,6 +26,7 @@
     <string name="face_unlock_recognizing">Recognizing face...</string>
 
     <!-- Bluetooth dialog -->
+    <string name="quick_settings_connected_devices_label">Connected devices</string>
     <string name="bluetooth_is_off">Bluetooth is off</string>
     <string name="tap_a_device_to_connect">Tap a device to connect</string>
     <string name="pair_new_device">Pair new device</string>

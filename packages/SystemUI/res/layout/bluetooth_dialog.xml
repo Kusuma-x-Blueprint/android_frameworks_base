@@ -34,7 +34,7 @@
 
         <TextView
             android:id="@+id/bluetooth_dialog_title"
-            android:text="@string/quick_settings_bluetooth_label"
+            android:text="@string/quick_settings_connected_devices_label"
             android:ellipsize="end"
             android:gravity="center_vertical|center_horizontal"
             android:layout_width="wrap_content"
