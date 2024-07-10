@@ -36,4 +36,6 @@
     <string name="usage_data_default_suffix">Mobile data</string>
     <string name="usage_wifi_default_suffix">Wi-Fi</string>
     <string name="usage_data_unknown">Unknown data usage</string>
+    <string name="usage_data_internet_dialog">Today\u0027s mobile data usage reaching</string>
+    <string name="usage_wifi_internet_dialog">Today\u0027s Wi-Fi data usage reaching</string>
 </resources>

@@ -387,6 +387,46 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/data_usage_layout"
+                style="@style/InternetDialog.Network"
+                android:orientation="vertical"
+                android:layout_height="wrap_content"
+                android:paddingBottom="4dp"
+                android:clickable="false"
+                android:focusable="false">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="56dp"
+                    android:gravity="start|top"
+                    android:orientation="horizontal"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="4dp">
+                    <ImageView
+                        android:src="@drawable/ic_info_outline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:tint="?android:attr/textColorTertiary"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/data_usage_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="8dp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:clickable="true"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/button_layout"
                 android:orientation="horizontal"
                 android:layout_width="match_parent"

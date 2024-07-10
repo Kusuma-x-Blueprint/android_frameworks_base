@@ -50,7 +50,10 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyDisplayInfo;
 import android.telephony.TelephonyManager;
+import android.text.BidiFormatter;
 import android.text.TextUtils;
+import android.text.format.Formatter;
+import android.text.format.Formatter.BytesResult;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -71,6 +74,7 @@ import com.android.settingslib.Utils;
 import com.android.settingslib.graph.SignalDrawable;
 import com.android.settingslib.mobile.MobileMappings;
 import com.android.settingslib.mobile.TelephonyIcons;
+import com.android.settingslib.net.DataUsageController;
 import com.android.settingslib.net.SignalStrengthUtil;
 import com.android.settingslib.wifi.WifiUtils;
 import com.android.systemui.R;
@@ -185,6 +189,7 @@ public class InternetDialogController implements AccessPointController.AccessPoi
     private DialogLaunchAnimator mDialogLaunchAnimator;
     private boolean mHasWifiEntries;
     private WifiStateWorker mWifiStateWorker;
+    private DataUsageController mDataController;
 
     @VisibleForTesting
     static final float TOAST_PARAMS_HORIZONTAL_WEIGHT = 1.0f;
@@ -275,6 +280,7 @@ public class InternetDialogController implements AccessPointController.AccessPoi
         mConnectedWifiInternetMonitor = new ConnectedWifiInternetMonitor();
         mWifiStateWorker = wifiStateWorker;
         mFeatureFlags = featureFlags;
+        mDataController = new DataUsageController(mContext);
     }
 
     void onStart(@NonNull InternetDialogCallback callback, boolean canConfigWifi) {
@@ -438,6 +444,33 @@ public class InternetDialogController implements AccessPointController.AccessPoi
             return mContext.getText(SUBTITLE_TEXT_NON_CARRIER_NETWORK_UNAVAILABLE);
         }
         return null;
+    }
+
+    CharSequence getDataUsageText() {
+        if (!isWifiEnabled()) {
+            mDataController.setSubscriptionId(
+                    SubscriptionManager.getDefaultDataSubscriptionId());
+        }
+
+        DataUsageController.DataUsageInfo info = isWifiEnabled() ? 
+                mDataController.getWifiDailyDataUsageInfo() :
+                mDataController.getDailyDataUsageInfo();
+        boolean showData = info != null && info.usageLevel >= 0;
+        String sentence = mContext.getString(isWifiEnabled() ? 
+                R.string.usage_wifi_internet_dialog : 
+                R.string.usage_data_internet_dialog);
+
+        if (showData) {
+            return sentence + " " + formatDataUsage(info.usageLevel);
+        }
+        return mContext.getString(R.string.usage_data_unknown);
+    }
+
+    private CharSequence formatDataUsage(long byteValue) {
+        final BytesResult res = Formatter.formatBytes(mContext.getResources(), byteValue,
+                Formatter.FLAG_IEC_UNITS);
+        return BidiFormatter.getInstance().unicodeWrap(mContext.getString(
+                com.android.internal.R.string.fileSizeSuffix, res.value, res.units));
     }
 
     @Nullable

@@ -120,6 +120,8 @@ public class InternetDialog extends SystemUIDialog implements
     private TextView mWifiToggleTitleText;
     private LinearLayout mWifiScanNotifyLayout;
     private TextView mWifiScanNotifyText;
+    private LinearLayout mDataUsageLayout;
+    private TextView mDataUsageText;
     private LinearLayout mSeeAllLayout;
     private RecyclerView mWifiRecyclerView;
     private ImageView mConnectedWifiIcon;
@@ -164,6 +166,7 @@ public class InternetDialog extends SystemUIDialog implements
     protected Runnable mHideSearchingRunnable = () -> {
         mIsSearchingHidden = true;
         mInternetDialogSubTitle.setText(getSubtitleText());
+        mDataUsageText.setText(getDataUsageText());
     };
 
     @Inject
@@ -230,6 +233,8 @@ public class InternetDialog extends SystemUIDialog implements
         mWifiToggleTitleText = mDialogView.requireViewById(R.id.wifi_toggle_title);
         mWifiScanNotifyLayout = mDialogView.requireViewById(R.id.wifi_scan_notify_layout);
         mWifiScanNotifyText = mDialogView.requireViewById(R.id.wifi_scan_notify_text);
+        mDataUsageLayout = mDialogView.requireViewById(R.id.data_usage_layout);
+        mDataUsageText = mDialogView.requireViewById(R.id.data_usage_text);
         mConnectedWifListLayout = mDialogView.requireViewById(R.id.wifi_connected_layout);
         mConnectedWifiIcon = mDialogView.requireViewById(R.id.wifi_connected_icon);
         mConnectedWifiTitleText = mDialogView.requireViewById(R.id.wifi_connected_title);
@@ -323,6 +328,7 @@ public class InternetDialog extends SystemUIDialog implements
         }
         mInternetDialogTitle.setText(getDialogTitleText());
         mInternetDialogSubTitle.setText(getSubtitleText());
+        mDataUsageText.setText(getDataUsageText());
         mAirplaneModeButton.setVisibility(
                 mInternetDialogController.isAirplaneModeEnabled() ? View.VISIBLE : View.GONE);
 
@@ -344,6 +350,7 @@ public class InternetDialog extends SystemUIDialog implements
         updateConnectedWifi(isWifiEnabled, isDeviceLocked);
         updateWifiListAndSeeAll(isWifiEnabled, isDeviceLocked);
         updateWifiScanNotify(isWifiEnabled, isWifiScanEnabled, isDeviceLocked);
+        updateDataUsage(isWifiScanEnabled);
     }
 
     private void setOnClickListener() {
@@ -630,6 +637,15 @@ public class InternetDialog extends SystemUIDialog implements
         mWifiScanNotifyLayout.setVisibility(View.VISIBLE);
     }
 
+    @MainThread
+    private void updateDataUsage(boolean isWifiScanEnabled) {
+        if (isWifiScanEnabled) {
+            mDataUsageLayout.setVisibility(View.GONE);
+            return;
+        }
+        mDataUsageLayout.setVisibility(View.VISIBLE);
+    }
+
     void onClickConnectedWifi(View view) {
         if (mConnectedWifiEntry == null) {
             return;
@@ -654,6 +670,10 @@ public class InternetDialog extends SystemUIDialog implements
     CharSequence getSubtitleText() {
         return mInternetDialogController.getSubtitleText(
                 mIsProgressBarVisible && !mIsSearchingHidden);
+    }
+
+    CharSequence getDataUsageText() {
+        return mInternetDialogController.getDataUsageText();
     }
 
     private Drawable getSignalStrengthDrawable(int subId) {
@@ -691,6 +711,7 @@ public class InternetDialog extends SystemUIDialog implements
         mProgressBar.setIndeterminate(visible);
         mDivider.setVisibility(visible ? View.GONE : View.VISIBLE);
         mInternetDialogSubTitle.setText(getSubtitleText());
+        mDataUsageText.setText(getDataUsageText());
     }
 
     private boolean shouldShowMobileDialog() {
