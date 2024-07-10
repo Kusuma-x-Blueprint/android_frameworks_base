@@ -81,6 +81,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
 
     public static final int MAX_DEVICES_COUNT = 4;
     private static final String SAVED_DEVICES_INTENT = "android.settings.SAVED_DEVICES";
+    private static final String ACTION_PAIR_NEW_DEVICE = "android.settings.BLUETOOTH_PAIRING_SETTINGS";
 
     private BluetoothViewAdapter mAdapter;
     private BluetoothController mBluetoothController;
@@ -96,6 +97,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
     private View mDivider;
     private LinearLayout mTurnOnLayout;
     private LinearLayout mSeeAllLayout;
+    private LinearLayout mPairDeviceLayout;
     private RecyclerView mBluetoothRecyclerView;
     private Button mDoneButton;
     private Button mSettingsButton;
@@ -165,6 +167,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
         mBluetoothToggleText = mDialogView.requireViewById(R.id.bluetooth_toggle_title);
         mBluetoothRecyclerView = mDialogView.requireViewById(R.id.bluetooth_list_layout);
         mSeeAllLayout = mDialogView.requireViewById(R.id.see_all_layout);
+        mPairDeviceLayout = mDialogView.requireViewById(R.id.pair_device_layout);
         mTurnOnLayout = mDialogView.requireViewById(R.id.turn_on_bluetooth_layout);
         mDoneButton = mDialogView.requireViewById(R.id.done_button);
         mSettingsButton = mDialogView.requireViewById(R.id.settings_button);
@@ -184,6 +187,10 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
                 });
         mSeeAllLayout.setOnClickListener(v -> {
             startActivity(new Intent(SAVED_DEVICES_INTENT)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), v);
+        });
+        mPairDeviceLayout.setOnClickListener(v -> {
+            startActivity(new Intent(ACTION_PAIR_NEW_DEVICE)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), v);
         });
         mDoneButton.setOnClickListener(v -> dismissDialog());
@@ -212,6 +219,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
         }
         mBluetoothController.removeCallback(mCallback);
         mSeeAllLayout.setOnClickListener(null);
+        mPairDeviceLayout.setOnClickListener(null);
         mBluetoothToggle.setOnCheckedChangeListener(null);
         mDoneButton.setOnClickListener(null);
         mSettingsButton.setOnClickListener(null);

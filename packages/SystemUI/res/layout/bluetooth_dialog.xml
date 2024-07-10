@@ -184,6 +184,49 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/pair_device_layout"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center_vertical|center_horizontal"
+                android:orientation="horizontal"
+                android:paddingStart="22dp"
+                android:paddingEnd="22dp">
+
+                <FrameLayout
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:clickable="false"
+                    android:layout_gravity="center_vertical|start"
+                    android:layout_marginStart="@dimen/internet_dialog_network_layout_margin">
+                    <ImageView
+                        android:id="@+id/qs_plus"
+                        android:src="@drawable/ic_qs_plus"
+                        android:tint="?android:attr/colorControlNormal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:orientation="vertical"
+                    android:clickable="false"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="@dimen/internet_dialog_network_layout_margin">
+                    <TextView
+                        android:text="@string/pair_new_device"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="start|center_vertical"
+                        android:textAppearance="@style/TextAppearance.InternetDialog"
+                        android:textSize="14sp"/>
+                </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/button_layout"
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
