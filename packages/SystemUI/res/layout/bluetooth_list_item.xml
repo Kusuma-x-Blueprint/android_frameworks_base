@@ -25,9 +25,8 @@
     <LinearLayout
         android:id="@+id/bluetooth_list"
         style="@style/InternetDialog.Network"
-        android:layout_height="@dimen/internet_dialog_wifi_network_height"
-        android:paddingStart="20dp"
-        android:paddingEnd="24dp">
+        android:layout_height="64dp"
+        android:paddingEnd="20dp">
         <FrameLayout
             android:layout_width="24dp"
             android:layout_height="24dp"

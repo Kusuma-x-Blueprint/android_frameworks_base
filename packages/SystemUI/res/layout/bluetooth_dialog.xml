@@ -81,8 +81,6 @@
         android:id="@+id/turn_on_bluetooth_layout"
         style="@style/InternetDialog.Network"
         android:layout_height="@dimen/internet_dialog_wifi_network_height"
-        android:layout_marginBottom="@dimen/internet_dialog_network_layout_margin"
-        android:background="@drawable/settingslib_switch_bar_bg_on"
         android:gravity="center"
         android:clickable="false"
         android:focusable="false">
@@ -143,22 +141,15 @@
 
             <LinearLayout
                 android:id="@+id/see_all_layout"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground"
-                android:gravity="center_vertical|center_horizontal"
-                android:orientation="horizontal"
-                android:paddingStart="22dp"
-                android:paddingEnd="22dp">
+                style="@style/InternetDialog.Network"
+                android:layout_height="64dp"
+                android:paddingEnd="20dp">
 
                 <FrameLayout
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:clickable="false"
-                    android:layout_gravity="center_vertical|start"
-                    android:layout_marginStart="@dimen/internet_dialog_network_layout_margin">
+                    android:layout_gravity="center_vertical|start">
                     <ImageView
                         android:id="@+id/arrow_forward"
                         android:src="@drawable/ic_arrow_forward"
@@ -185,22 +176,15 @@
 
             <LinearLayout
                 android:id="@+id/pair_device_layout"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground"
-                android:gravity="center_vertical|center_horizontal"
-                android:orientation="horizontal"
-                android:paddingStart="22dp"
-                android:paddingEnd="22dp">
+                style="@style/InternetDialog.Network"
+                android:layout_height="64dp"
+                android:paddingStart="20dp">
 
                 <FrameLayout
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:clickable="false"
-                    android:layout_gravity="center_vertical|start"
-                    android:layout_marginStart="@dimen/internet_dialog_network_layout_margin">
+                    android:layout_gravity="center_vertical|start">
                     <ImageView
                         android:id="@+id/qs_plus"
                         android:src="@drawable/ic_qs_plus"

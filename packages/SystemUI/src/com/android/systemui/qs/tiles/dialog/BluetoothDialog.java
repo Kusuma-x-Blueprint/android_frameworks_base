@@ -172,14 +172,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
         mDoneButton = mDialogView.requireViewById(R.id.done_button);
         mSettingsButton = mDialogView.requireViewById(R.id.settings_button);
         mBackgroundOn = mContext.getDrawable(R.drawable.settingslib_switch_bar_bg_on);
-
-        TypedArray typedArray = mContext.obtainStyledAttributes(
-                new int[]{android.R.attr.selectableItemBackground});
-        try {
-            mBackgroundOff = typedArray.getDrawable(0 /* index */);
-        } finally {
-            typedArray.recycle();
-        }
+        mBackgroundOff = mContext.getDrawable(R.drawable.internet_dialog_selected_effect);
 
         mBluetoothToggle.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> {
@@ -277,7 +270,7 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
         if (!enabled || devices == null) {
             mBluetoothRecyclerView.setVisibility(View.GONE);
             mSeeAllLayout.setVisibility(View.GONE);
-            updateTurnOnLayout(true);
+            updateTurnOnLayout(false);
             return;
         }
         boolean isOnCall = Utils.isAudioModeOngoingCall(mContext);
@@ -299,10 +292,13 @@ public class BluetoothDialog extends SystemUIDialog implements Window.Callback {
     }
 
     private void updateTurnOnLayout(boolean showBackground) {
-        ViewGroup.LayoutParams lp = mTurnOnLayout.getLayoutParams();
+        ViewGroup.MarginLayoutParams lp = 
+                (ViewGroup.MarginLayoutParams) mTurnOnLayout.getLayoutParams();
         lp.height = mContext.getResources().getDimensionPixelSize(
                 showBackground ? R.dimen.internet_dialog_wifi_network_height
                 : R.dimen.bluetooth_dialog_toggle_height);
+        lp.setMargins(0, 0, 0, showBackground ? mContext.getResources().getDimensionPixelSize(
+                R.dimen.internet_dialog_network_layout_margin) : 0);
         mTurnOnLayout.setLayoutParams(lp);
         mTurnOnLayout.setBackground(showBackground ? mBackgroundOn : null);
         mBluetoothToggleText.setTextAppearance(showBackground
