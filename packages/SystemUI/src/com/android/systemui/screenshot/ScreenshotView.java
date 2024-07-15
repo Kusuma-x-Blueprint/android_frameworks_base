@@ -56,6 +56,7 @@ import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Looper;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -621,13 +622,22 @@ public class ScreenshotView extends FrameLayout implements
             mScreenshotBadge.setAlpha(borderAlpha);
         });
 
+        boolean showOverlay = Settings.Secure.getInt(mContext.getContentResolver(),
+                Settings.Secure.SHOW_SCREENSHOT_OVERLAY, 1) != 0;
+
         if (showFlash) {
             dropInAnimation.play(flashOutAnimator).after(flashInAnimator);
-            dropInAnimation.play(flashOutAnimator).with(toCorner);
+            if (showOverlay) {
+                dropInAnimation.play(flashOutAnimator).with(toCorner);
+            }
         } else {
-            dropInAnimation.play(toCorner);
+            if (showOverlay) {
+                dropInAnimation.play(toCorner);
+            }
         }
-        dropInAnimation.play(borderFadeIn).after(toCorner);
+        if (showOverlay) {
+            dropInAnimation.play(borderFadeIn).after(toCorner);
+        }
 
         dropInAnimation.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -671,7 +681,9 @@ public class ScreenshotView extends FrameLayout implements
                 mScreenshotPreview.setY(finalPos.y - mScreenshotPreview.getHeight() / 2f);
                 requestLayout();
                 mInteractionJankMonitor.end(CUJ_TAKE_SCREENSHOT);
-                createScreenshotActionsShadeAnimation().start();
+                if (showOverlay) {
+                    createScreenshotActionsShadeAnimation().start();
+                }
             }
         });
 
