@@ -2970,13 +2970,9 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
 
             if (Settings.System.getInt(mContext.getContentResolver(),
                     Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0) {
-                if (progress == 0 || progress == 3000) {
+                if (progress == (mRow.ss.levelMin * 100) || progress == (mRow.ss.levelMax * 100)) {
                     AsyncTask.execute(() ->
-                            mVibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE)));
-                } else {
-                    int duration = (int) (1 + 0.026 * progress);
-                    AsyncTask.execute(() ->
-                            mVibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)));
+                            mVibrator.vibrate(VibrationEffect.get(VibrationEffect.EFFECT_TEXTURE_TICK)));
                 }
             }
         }
