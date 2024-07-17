@@ -110,8 +110,6 @@ public class BrightnessController implements ToggleSlider.Listener, MirroredBrig
     private static final VibrationEffect BRIGHTNESS_SLIDER_HAPTIC =
             VibrationEffect.get(VibrationEffect.EFFECT_TEXTURE_TICK);
 
-    private static int mLastTrackingUpdate = 0;
-
     @Override
     public void setMirror(BrightnessMirrorController controller) {
         mControl.setMirrorControllerAndMirror(controller);
@@ -368,11 +366,9 @@ public class BrightnessController implements ToggleSlider.Listener, MirroredBrig
         }
         setBrightness(valFloat);
 
-        mLastTrackingUpdate = (mLastTrackingUpdate + 1) % 5;
-
-        // Give haptic feedback every 5 changes, only if brightness is changed manually
-        if (mHasVibrator && tracking && mLastTrackingUpdate == 0)
+        if (mHasVibrator && tracking && (value == 0 || value == GAMMA_SPACE_MAX)) {
             mVibrator.vibrate(BRIGHTNESS_SLIDER_HAPTIC);
+        }
 
         if (!tracking) {
             AsyncTask.execute(new Runnable() {
