@@ -24,6 +24,7 @@ import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.UserHandle;
@@ -40,6 +41,7 @@ import androidx.annotation.Nullable;
 
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
+import com.android.settingslib.graph.SignalDrawable;
 import com.android.settingslib.net.DataUsageController;
 import com.android.systemui.Prefs;
 import com.android.systemui.R;
@@ -190,18 +192,18 @@ public class CellularTile extends SecureQSTile<SignalState> {
             state.secondaryLabel = r.getString(R.string.keyguard_missing_sim_message_short);
         } else if (cb.airplaneModeEnabled) {
             state.state = Tile.STATE_UNAVAILABLE;
-            state.icon = ResourceIcon.get(R.drawable.qs_data_icon_off);
+            state.icon = ResourceIcon.get(R.drawable.ic_qs_no_sim);
             state.secondaryLabel = r.getString(R.string.status_bar_airplane);
         } else if (mobileDataEnabled) {
             state.state = Tile.STATE_ACTIVE;
-            state.icon = ResourceIcon.get(R.drawable.qs_data_icon_on);
+            state.icon = new SignalIcon(cb.mobileSignalIconId);
             state.secondaryLabel = appendMobileDataType(
                     // Only show carrier name if there are more than 1 subscription
                     cb.multipleSubs ? cb.dataSubscriptionName : "",
                     getMobileDataContentName(cb));
         } else {
             state.state = Tile.STATE_INACTIVE;
-            state.icon = ResourceIcon.get(R.drawable.qs_data_icon_off);
+            state.icon = new SignalIcon(cb.mobileSignalIconId);
             state.secondaryLabel = r.getString(R.string.cell_data_off);
         }
 
@@ -259,6 +261,7 @@ public class CellularTile extends SecureQSTile<SignalState> {
         boolean noSim;
         boolean roaming;
         boolean multipleSubs;
+        int mobileSignalIconId;
     }
 
     private final class CellSignalCallback implements SignalCallback {
@@ -276,6 +279,7 @@ public class CellularTile extends SecureQSTile<SignalState> {
             mInfo.activityIn = indicators.activityIn;
             mInfo.activityOut = indicators.activityOut;
             mInfo.roaming = indicators.roaming;
+            mInfo.mobileSignalIconId = indicators.qsIcon.icon;
             mInfo.multipleSubs = mController.getNumberSubscriptions() > 1;
             refreshState(mInfo);
         }
@@ -290,6 +294,23 @@ public class CellularTile extends SecureQSTile<SignalState> {
         public void setIsAirplaneMode(@NonNull IconState icon) {
             mInfo.airplaneModeEnabled = icon.visible;
             refreshState(mInfo);
+        }
+    }
+
+    private static class SignalIcon extends Icon {
+        private final int mState;
+        SignalIcon(int state) {
+            mState = state;
+        }
+        public int getState() {
+            return mState;
+        }
+
+        @Override
+        public Drawable getDrawable(Context context) {
+            SignalDrawable d = new SignalDrawable(context);
+            d.setLevel(getState());
+            return d;
         }
     }
 
