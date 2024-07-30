@@ -72,11 +72,9 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.HardwareBuffer;
-import android.hardware.power.Boost;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.IRemoteCallback;
-import android.os.PowerManagerInternal;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.Trace;
@@ -98,7 +96,6 @@ import com.android.internal.protolog.common.ProtoLog;
 import com.android.internal.util.function.pooled.PooledLambda;
 import com.android.server.inputmethod.InputMethodManagerInternal;
 import com.android.server.wm.utils.RotationAnimationUtils;
-import com.android.server.LocalServices;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -166,7 +163,7 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
     private final Token mToken;
     private RemoteTransition mRemoteTransition = null;
 
-    private final PowerManagerInternal mPowerManagerInternal;
+    private PowerBoostSetter mPowerBoostSetter = null;
 
     /** Only use for clean-up after binder death! */
     private SurfaceControl.Transaction mStartTransaction = null;
@@ -232,7 +229,7 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
 
         controller.mTransitionTracer.logState(this);
 
-        mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
+        mPowerBoostSetter = new PowerBoostSetter();
     }
 
     @Nullable
@@ -415,8 +412,8 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
     }
 
     protected void doActivityBoost() {
-        if (mPowerManagerInternal != null) {
-            mPowerManagerInternal.setPowerBoost(Boost.DISPLAY_UPDATE_IMMINENT, 80);
+        if (mPowerBoostSetter != null) {
+            mPowerBoostSetter.boostPower();
         }
     }
 
