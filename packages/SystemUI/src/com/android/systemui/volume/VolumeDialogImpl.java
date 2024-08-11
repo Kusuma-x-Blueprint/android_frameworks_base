@@ -2482,6 +2482,15 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
         } else {
             row.appIcon.clearColorFilter();
         }
+
+        // add vibration
+        if (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) != 0) {
+            if (row.slider.getProgress() == 0 || row.slider.getProgress() == 100) {
+                AsyncTask.execute(() ->
+                        mVibrator.vibrate(VibrationEffect.get(VibrationEffect.EFFECT_TEXTURE_TICK)));
+            }
+        }
     }
 
     private void updateAppVolumeRows() {
