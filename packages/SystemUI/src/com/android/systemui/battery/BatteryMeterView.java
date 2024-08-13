@@ -79,6 +79,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     private boolean mShowPercentAvailable;
     private String mEstimateText = null;
     private boolean mCharging;
+    private boolean mPresent = true;
     private boolean mIsOverheated;
     private boolean mDisplayShieldEnabled;
     // Error state where we know nothing about the current battery state
@@ -118,7 +119,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         setupLayoutTransition();
 
         mBatteryIconView = new ImageView(context);
-        mBatteryIconView.setImageDrawable(mDrawable);
+        updateDrawable();
         final MarginLayoutParams mlp = new MarginLayoutParams(
                 getResources().getDimensionPixelSize(R.dimen.status_bar_battery_icon_width),
                 getResources().getDimensionPixelSize(R.dimen.status_bar_battery_icon_height));
@@ -249,6 +250,10 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mBatteryEstimateFetcher = fetcher;
     }
 
+    void setBatteryPresence(boolean isPresent) {
+        mPresent = isPresent;
+    }
+
     void setDisplayShieldEnabled(boolean displayShieldEnabled) {
         mDisplayShieldEnabled = displayShieldEnabled;
     }
@@ -376,10 +381,10 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mBatteryStateUnknown = isUnknown;
         updateContentDescription();
 
-        if (mBatteryStateUnknown) {
+        if (mBatteryStateUnknown && mPresent) {
             mBatteryIconView.setImageDrawable(getUnknownStateDrawable());
         } else {
-            mBatteryIconView.setImageDrawable(mDrawable);
+            updateDrawable();
         }
 
         updateShowPercent();
@@ -434,6 +439,14 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mBatteryIconView.invalidateDrawable(mDrawable);
     }
 
+    private void updateDrawable() {
+        if (!mPresent) {
+            return;
+        }
+
+        mBatteryIconView.setImageDrawable(mDrawable);
+    }
+
     @Override
     public void onDarkChanged(ArrayList<Rect> areas, float darkIntensity, int tint) {
         float intensity = DarkIconDispatcher.isInAreas(areas, this) ? darkIntensity : 0;
@@ -475,6 +488,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         pw.println("    mBatteryStateUnknown: " + mBatteryStateUnknown);
         pw.println("    mLevel: " + mLevel);
         pw.println("    mMode: " + mShowPercentMode);
+        pw.println("    mPresent: " + mPresent);
     }
 
     @VisibleForTesting
