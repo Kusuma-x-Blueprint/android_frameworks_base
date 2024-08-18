@@ -3,6 +3,7 @@
  *           (C) 2023 ArrowOS
  *           (C) 2023 The LibreMobileOS Foundation
  *           (C) 2024 The LeafOS Project
+ *           (C) 2024 Kusuma
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,17 +47,17 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Iterator;
 
-public class PropImitationHooks {
+public class RatRoadHooks {
 
-    private static final String TAG = PropImitationHooks.class.getSimpleName();
+    private static final String TAG = RatRoadHooks.class.getSimpleName();
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-    private static final boolean SPOOF_GMS =
-            SystemProperties.getBoolean("persist.sys.spoof.gms", true);
+    private static final boolean USE_RATROAD =
+            SystemProperties.getBoolean("persist.sys.extra.use_rr", true);
 
     private static final String sStockFp =
             Resources.getSystem().getString(R.string.config_stockFingerprint);
 
-    private static final String DATA_FILE = "gms_certified_props.json";
+    private static final String PROPS_FILE = "rr_props.json";
 
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
     private static final String PACKAGE_FINSKY = "com.android.vending";
@@ -85,15 +86,17 @@ public class PropImitationHooks {
         /* Set certified properties for GMSCore
          * Set stock fingerprint for ARCore
          */
-        if (SPOOF_GMS && packageName.equals(PACKAGE_GMS)) {
-            dlog("Setting fresh build date for: " + packageName);
-            setPropValue("TIME", String.valueOf(System.currentTimeMillis()));
-            if (sIsGms) {
-                setCertifiedPropsForGms();
+        if (USE_RATROAD) {
+            if (packageName.equals(PACKAGE_GMS)) {
+                dlog("Setting fresh build date for: " + packageName);
+                setPropValue("TIME", String.valueOf(System.currentTimeMillis()));
+                if (sIsGms) {
+                    setCertifiedPropsForGms();
+                }
+            } else if (!sStockFp.isEmpty() && packageName.equals(PACKAGE_ARCORE)) {
+                dlog("Setting stock fingerprint for: " + packageName);
+                setPropValue("FINGERPRINT", sStockFp);
             }
-        } else if (!sStockFp.isEmpty() && packageName.equals(PACKAGE_ARCORE)) {
-            dlog("Setting stock fingerprint for: " + packageName);
-            setPropValue("FINGERPRINT", sStockFp);
         }
     }
 
@@ -138,8 +141,8 @@ public class PropImitationHooks {
             }
         };
         if (!was) {
-            File dataFile = new File(Environment.getDataSystemDirectory(), DATA_FILE);
-            String savedProps = readFromFile(dataFile);
+            File propsFile = new File(Environment.getDataSystemDirectory(), PROPS_FILE);
+            String savedProps = readFromFile(propsFile);
             if (TextUtils.isEmpty(savedProps)) {
                 Log.e(TAG, "No props found to spoof");
                 return;

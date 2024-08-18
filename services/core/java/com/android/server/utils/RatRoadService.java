@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 The LeafOS Project
+ *               2024 Kusuma
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,27 +32,28 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class PropImitationService extends SystemService {
-    private static final String TAG = PropImitationService.class.getSimpleName();
-    private static final String API = "https://raw.githubusercontent.com/KusumaOS/OTA/lineage-20.0/properties.json";
+public final class RatRoadService extends SystemService {
+    private static final String TAG = RatRoadService.class.getSimpleName();
+    private static final String PROPS_API = 
+            "https://raw.githubusercontent.com/KusumaOS/OTA/lineage-20.0/properties.json";
 
-    private static final String DATA_FILE = "gms_certified_props.json";
+    private static final String PROPS_FILE = "rr_props.json";
 
     private static final long INITIAL_DELAY = 0;
     private static final long INTERVAL = 5;
 
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-    private static final boolean SPOOF_GMS =
-            SystemProperties.getBoolean("persist.sys.spoof.gms", true);
+    private static final boolean USE_RATROAD =
+            SystemProperties.getBoolean("persist.sys.extra.user_rr", true);
 
     private final Context mContext;
-    private final File mDataFile;
+    private final File mPropsFile;
     private final ScheduledExecutorService mScheduler;
 
-    public PropImitationService(Context context) {
+    public RatRoadService(Context context) {
         super(context);
         mContext = context;
-        mDataFile = new File(Environment.getDataSystemDirectory(), DATA_FILE);
+        mPropsFile = new File(Environment.getDataSystemDirectory(), PROPS_FILE);
         mScheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -60,8 +62,7 @@ public final class PropImitationService extends SystemService {
 
     @Override
     public void onBootPhase(int phase) {
-        if (SPOOF_GMS
-                && isAppInstalled("com.google.android.gms")
+        if (USE_RATROAD && isAppInstalled("com.google.android.gms")
                 && (isAppInstalled("com.google.android.syncadapters.calendar")
                 || isAppInstalled("com.google.android.syncadapters.contacts"))
                 && phase == PHASE_BOOT_COMPLETED) {
@@ -100,7 +101,7 @@ public final class PropImitationService extends SystemService {
 
     private String fetchProps() {
         try {
-            URL url = new URI(API).toURL();
+            URL url = new URI(PROPS_API).toURL();
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
             try {
@@ -166,12 +167,12 @@ public final class PropImitationService extends SystemService {
                     return;
                 }
 
-                String savedProps = readFromFile(mDataFile);
+                String savedProps = readFromFile(mPropsFile);
                 String props = fetchProps();
 
                 if (props != null && !savedProps.equals(props)) {
                     dlog("Found new props");
-                    writeToFile(mDataFile, props);
+                    writeToFile(mPropsFile, props);
                     dlog("FetchGmsCertifiedProps completed");
                 } else {
                     dlog("No change in props");
