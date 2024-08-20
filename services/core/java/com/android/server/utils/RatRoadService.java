@@ -111,17 +111,24 @@ public final class RatRoadService extends SystemService {
             try {
                 urlConnection.setConnectTimeout(10000);
                 urlConnection.setReadTimeout(10000);
+                int responseCode = urlConnection.getResponseCode();
 
-                try (BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(urlConnection.getInputStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    try (BufferedReader reader =
+                            new BufferedReader(new InputStreamReader(
+                            urlConnection.getInputStream()))) {
+                        StringBuilder response = new StringBuilder();
+                        String line;
 
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line).append(System.lineSeparator());
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line).append(System.lineSeparator());
+                        }
+
+                        return response.toString();
                     }
-
-                    return response.toString();
+                } else {
+                    Log.e(TAG, "API request failed with response code: " + responseCode);
+                    return null;
                 }
             } finally {
                 urlConnection.disconnect();
