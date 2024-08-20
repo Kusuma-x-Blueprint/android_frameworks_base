@@ -31,21 +31,56 @@ import android.os.Binder;
 import android.os.Environment;
 import android.os.SystemProperties;
 import android.os.Process;
+import android.security.keystore.KeyProperties;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.R;
+import com.android.internal.org.bouncycastle.asn1.ASN1Boolean;
+import com.android.internal.org.bouncycastle.asn1.ASN1Encodable;
+import com.android.internal.org.bouncycastle.asn1.ASN1EncodableVector;
+import com.android.internal.org.bouncycastle.asn1.ASN1Enumerated;
+import com.android.internal.org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import com.android.internal.org.bouncycastle.asn1.ASN1OctetString;
+import com.android.internal.org.bouncycastle.asn1.ASN1Sequence;
+import com.android.internal.org.bouncycastle.asn1.ASN1TaggedObject;
+import com.android.internal.org.bouncycastle.asn1.DEROctetString;
+import com.android.internal.org.bouncycastle.asn1.DERSequence;
+import com.android.internal.org.bouncycastle.asn1.DERTaggedObject;
+import com.android.internal.org.bouncycastle.asn1.x509.Extension;
+import com.android.internal.org.bouncycastle.cert.X509CertificateHolder;
+import com.android.internal.org.bouncycastle.cert.X509v3CertificateBuilder;
+import com.android.internal.org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import com.android.internal.org.bouncycastle.openssl.PEMKeyPair;
+import com.android.internal.org.bouncycastle.openssl.PEMParser;
+import com.android.internal.org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import com.android.internal.org.bouncycastle.operator.ContentSigner;
+import com.android.internal.org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import com.android.internal.org.bouncycastle.util.io.pem.PemReader;
+import com.android.internal.util.XMLParser;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.lang.reflect.Field;
+import java.security.KeyPair;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class RatRoadHooks {
 
@@ -53,11 +88,14 @@ public class RatRoadHooks {
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
     private static final boolean USE_RATROAD =
             SystemProperties.getBoolean("persist.sys.extra.use_rr", true);
+    private static final boolean USE_ALLEYWAY =
+            SystemProperties.getBoolean("persist.sys.extra.use_rr_aw", true);
 
     private static final String sStockFp =
             Resources.getSystem().getString(R.string.config_stockFingerprint);
 
     private static final String PROPS_FILE = "rr_props.json";
+    private static final String KEYS_FILE = "rr_keys.xml";
 
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
     private static final String PACKAGE_FINSKY = "com.android.vending";
@@ -69,6 +107,19 @@ public class RatRoadHooks {
 
     private static volatile String sProcessName;
     private static volatile boolean sIsGms, sIsFinsky;
+
+    private static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.4.1.11129.2.1.17");
+    private static final CertificateFactory certificateFactory;
+    private static final Map<String, KeyBox> keyboxes = new HashMap<>();
+
+    static {
+        try {
+            certificateFactory = CertificateFactory.getInstance("X.509");
+        } catch (Throwable t) {
+            Log.e(TAG, t.toString());
+            throw new RuntimeException(t);
+        }
+    }
 
     public static void setProps(Context context) {
         final String packageName = context.getPackageName();
@@ -124,6 +175,19 @@ public class RatRoadHooks {
             field.setAccessible(false);
         } catch (Exception e) {
             Log.e(TAG, "Failed to spoof Build." + key, e);
+        }
+    }
+
+    private static PEMKeyPair parseKeyPair(String key) throws Throwable {
+        try (PEMParser parser = new PEMParser(new StringReader(key))) {
+            return (PEMKeyPair) parser.readObject();
+        }
+    }
+
+    private static Certificate parseCert(String cert) throws Throwable {
+        try (PemReader reader = new PemReader(new StringReader(cert))) {
+            return certificateFactory.generateCertificate(
+                    new ByteArrayInputStream(reader.readPemObject().getContent()));
         }
     }
 
@@ -206,7 +270,7 @@ public class RatRoadHooks {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    content.append(line);
+                    content.append(line).append(System.lineSeparator());
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error reading from file", e);
@@ -215,15 +279,161 @@ public class RatRoadHooks {
         return content.toString();
     }
 
-    public static void onEngineGetCertificateChain() {
-        // Check stack for SafetyNet or Play Integrity
-        if (isCallerSafetyNet() || sIsFinsky) {
-            dlog("Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
-            throw new UnsupportedOperationException();
+    private static void readFromXml(String data) {
+        keyboxes.clear();
+        if (data == null) {
+            dlog("Clear all keyboxes");
+            return;
+        }
+        XMLParser xmlParser = new XMLParser(data);
+
+        try {
+            int numberOfKeyboxes = Integer.parseInt(Objects.requireNonNull(xmlParser.obtainPath(
+                    "AndroidAttestation.NumberOfKeyboxes").get("text")));
+            for (int i = 0; i < numberOfKeyboxes; i++) {
+                String keyboxAlgorithm = xmlParser.obtainPath(
+                        "AndroidAttestation.Keybox.Key[" + i + "]").get("algorithm");
+                String privateKey = xmlParser.obtainPath(
+                        "AndroidAttestation.Keybox.Key[" + i + "].PrivateKey").get("text");
+                int numberOfCertificates = Integer.parseInt(Objects.requireNonNull(xmlParser.obtainPath(
+                        "AndroidAttestation.Keybox.Key[" + i + "].CertificateChain.NumberOfCertificates").get("text")));
+
+                LinkedList<Certificate> certificateChain = new LinkedList<>();
+
+                for (int j = 0; j < numberOfCertificates; j++) {
+                    Map<String, String> certData = xmlParser.obtainPath(
+                            "AndroidAttestation.Keybox.Key[" + i + "].CertificateChain.Certificate[" + j + "]");
+                    certificateChain.add(parseCert(certData.get("text")));
+                }
+                String algo;
+                if (keyboxAlgorithm.toLowerCase().equals("ecdsa")) {
+                    algo = KeyProperties.KEY_ALGORITHM_EC;
+                } else {
+                    algo = KeyProperties.KEY_ALGORITHM_RSA;
+                }
+                var pemKp = parseKeyPair(privateKey);
+                var kp = new JcaPEMKeyConverter().getKeyPair(pemKp);
+                keyboxes.put(algo, new KeyBox(pemKp, kp, certificateChain));
+            }
+            dlog("update " + numberOfKeyboxes + " keyboxes");
+        } catch (Throwable t) {
+            Log.e("Error loading xml file (keyboxes cleared): ", t.toString());
+        }
+    }
+
+    public static Certificate[] onEngineGetCertificateChain(Certificate[] caList) {
+        File keysFile = new File(Environment.getDataSystemDirectory(), KEYS_FILE);
+        String savedKeys = readFromFile(keysFile);
+        if (USE_RATROAD && USE_ALLEYWAY
+                && keysFile.exists() && savedKeys.contains("Keybox")) {
+            try {
+                readFromXml(savedKeys);
+            } catch (Exception e) {
+                Log.e("Failed to update keybox", e.toString());
+            }
+
+            try {
+                X509Certificate leaf = (X509Certificate) certificateFactory.generateCertificate(
+                        new ByteArrayInputStream(caList[0].getEncoded()));
+                byte[] bytes = leaf.getExtensionValue(OID.getId());
+                if (bytes == null) return caList;
+    
+                X509CertificateHolder leafHolder = new X509CertificateHolder(leaf.getEncoded());
+                Extension ext = leafHolder.getExtension(OID);
+                ASN1Sequence sequence = ASN1Sequence.getInstance(ext.getExtnValue().getOctets());
+                ASN1Encodable[] encodables = sequence.toArray();
+                ASN1Sequence teeEnforced = (ASN1Sequence) encodables[7];
+                ASN1EncodableVector vector = new ASN1EncodableVector();
+                ASN1Encodable rootOfTrust = null;
+
+                for (ASN1Encodable asn1Encodable : teeEnforced) {
+                    ASN1TaggedObject taggedObject = (ASN1TaggedObject) asn1Encodable;
+                    if (taggedObject.getTagNo() == 704) continue;
+                    vector.add(taggedObject);
+                }
+    
+                LinkedList<Certificate> certificates;
+                X509v3CertificateBuilder builder;
+                ContentSigner signer;
+
+                var k = keyboxes.get(leaf.getPublicKey().getAlgorithm());
+                if (k == null)
+                    throw new UnsupportedOperationException(
+                            "unsupported algorithm " + leaf.getPublicKey().getAlgorithm());
+                certificates = new LinkedList<>(k.certificates);
+                builder = new X509v3CertificateBuilder(
+                        new X509CertificateHolder(
+                                certificates.get(0).getEncoded()
+                        ).getSubject(),
+                        leafHolder.getSerialNumber(),
+                        leafHolder.getNotBefore(),
+                        leafHolder.getNotAfter(),
+                        leafHolder.getSubject(),
+                        leafHolder.getSubjectPublicKeyInfo()
+                );
+                signer = new JcaContentSignerBuilder(leaf.getSigAlgName())
+                        .build(k.keyPair.getPrivate());
+
+                byte[] verifiedBootKey = new byte[32];
+                byte[] verifiedBootHash = new byte[32];
+
+                ThreadLocalRandom.current().nextBytes(verifiedBootKey);
+                ThreadLocalRandom.current().nextBytes(verifiedBootHash);
+
+                ASN1Encodable[] rootOfTrustEnc = {
+                        new DEROctetString(verifiedBootKey), 
+                        ASN1Boolean.TRUE, 
+                        new ASN1Enumerated(0), 
+                        new DEROctetString(verifiedBootHash)
+                };
+    
+                ASN1Sequence rootOfTrustSeq = new DERSequence(rootOfTrustEnc);
+                ASN1TaggedObject rootOfTrustTagObj = new DERTaggedObject(704, rootOfTrustSeq);
+                vector.add(rootOfTrustTagObj);
+    
+                ASN1Sequence hackEnforced = new DERSequence(vector);
+                encodables[7] = hackEnforced;
+                ASN1Sequence hackedSeq = new DERSequence(encodables);
+    
+                ASN1OctetString hackedSeqOctets = new DEROctetString(hackedSeq);
+                Extension hackedExt = new Extension(OID, false, hackedSeqOctets);
+                builder.addExtension(hackedExt);
+    
+                for (ASN1ObjectIdentifier extensionOID : leafHolder.getExtensions().getExtensionOIDs()) {
+                    if (OID.getId().equals(extensionOID.getId())) continue;
+                    builder.addExtension(leafHolder.getExtension(extensionOID));
+                }
+    
+                certificates.addFirst(new JcaX509CertificateConverter().getCertificate(
+                        builder.build(signer)));
+    
+                return certificates.toArray(new Certificate[0]);
+            } catch (Throwable t) {
+                Log.e(TAG, t.toString());
+            }
+            return caList;
+        } else {
+            if (USE_RATROAD && (isCallerSafetyNet() || sIsFinsky)) {
+                dlog("Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
+                throw new UnsupportedOperationException();
+            }
+            return caList;
         }
     }
 
     private static void dlog(String message) {
         if (DEBUG) Log.d(TAG, message);
+    }
+
+    public static class KeyBox {
+        private final PEMKeyPair pemKeyPair;
+        private final KeyPair keyPair;
+        private final List<Certificate> certificates;
+
+        public KeyBox(PEMKeyPair pemKeyPair, KeyPair keyPair, List<Certificate> certificates) {
+            this.pemKeyPair = pemKeyPair;
+            this.keyPair = keyPair;
+            this.certificates = certificates;
+        }
     }
 }

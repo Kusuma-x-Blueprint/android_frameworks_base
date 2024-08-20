@@ -36,8 +36,11 @@ public final class RatRoadService extends SystemService {
     private static final String TAG = RatRoadService.class.getSimpleName();
     private static final String PROPS_API = 
             "https://raw.githubusercontent.com/KusumaOS/OTA/lineage-20.0/properties.json";
+    private static final String KEYS_API = 
+            "https://raw.githubusercontent.com/KusumaOS/OTA/lineage-20.0/keys.xml";
 
     private static final String PROPS_FILE = "rr_props.json";
+    private static final String KEYS_FILE = "rr_keys.xml";
 
     private static final long INITIAL_DELAY = 0;
     private static final long INTERVAL = 5;
@@ -48,12 +51,14 @@ public final class RatRoadService extends SystemService {
 
     private final Context mContext;
     private final File mPropsFile;
+    private final File mKeysFile;
     private final ScheduledExecutorService mScheduler;
 
     public RatRoadService(Context context) {
         super(context);
         mContext = context;
         mPropsFile = new File(Environment.getDataSystemDirectory(), PROPS_FILE);
+        mKeysFile = new File(Environment.getDataSystemDirectory(), KEYS_FILE);
         mScheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -68,7 +73,7 @@ public final class RatRoadService extends SystemService {
                 && phase == PHASE_BOOT_COMPLETED) {
             Log.i(TAG, "Scheduling the service");
             mScheduler.scheduleAtFixedRate(
-                    new FetchGmsCertifiedProps(), INITIAL_DELAY, INTERVAL, TimeUnit.MINUTES);
+                    new FetchGmsCertifiedFiles(), INITIAL_DELAY, INTERVAL, TimeUnit.MINUTES);
         }
     }
 
@@ -80,7 +85,7 @@ public final class RatRoadService extends SystemService {
                 String line;
 
                 while ((line = reader.readLine()) != null) {
-                    content.append(line);
+                    content.append(line).append(System.lineSeparator());
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error reading from file", e);
@@ -99,9 +104,8 @@ public final class RatRoadService extends SystemService {
         }
     }
 
-    private String fetchProps() {
+    private String fetchFile(URL url) {
         try {
-            URL url = new URI(PROPS_API).toURL();
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
             try {
@@ -114,7 +118,7 @@ public final class RatRoadService extends SystemService {
                     String line;
 
                     while ((line = reader.readLine()) != null) {
-                        response.append(line);
+                        response.append(line).append(System.lineSeparator());
                     }
 
                     return response.toString();
@@ -156,29 +160,42 @@ public final class RatRoadService extends SystemService {
         if (DEBUG) Log.d(TAG, message);
     }
 
-    private class FetchGmsCertifiedProps implements Runnable {
+    private class FetchGmsCertifiedFiles implements Runnable {
         @Override
         public void run() {
             try {
-                dlog("FetchGmsCertifiedProps started");
+                dlog("FetchGmsCertifiedFiles started");
 
                 if (!isInternetConnected()) {
                     Log.e(TAG, "Internet unavailable");
                     return;
                 }
 
+                URL propsUrl = new URI(PROPS_API).toURL();
                 String savedProps = readFromFile(mPropsFile);
-                String props = fetchProps();
+                String props = fetchFile(propsUrl);
 
                 if (props != null && !savedProps.equals(props)) {
                     dlog("Found new props");
                     writeToFile(mPropsFile, props);
-                    dlog("FetchGmsCertifiedProps completed");
+                    dlog("Fetching props completed");
                 } else {
                     dlog("No change in props");
                 }
+
+                URL keysUrl = new URI(KEYS_API).toURL();
+                String savedKeys = readFromFile(mKeysFile);
+                String keys = fetchFile(keysUrl);
+
+                if (keys != null && !savedKeys.equals(keys)) {
+                    dlog("Found new keys");
+                    writeToFile(mKeysFile, keys);
+                    dlog("Fetching keys completed");
+                } else {
+                    dlog("No change in keys");
+                }
             } catch (Exception e) {
-                Log.e(TAG, "Error in FetchGmsCertifiedProps", e);
+                Log.e(TAG, "Error in FetchGmsCertifiedFiles", e);
             }
         }
     }
