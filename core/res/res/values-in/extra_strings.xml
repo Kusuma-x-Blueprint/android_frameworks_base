@@ -22,4 +22,7 @@
     <string name="permgrouplab_otherSensors">Sensor</string>
     <!-- Description of a category of application permissions, listed so the user can choose whether they want to allow the application to do this. -->
     <string name="permgroupdesc_otherSensors">mengakses data sensor seperti orientasi, pergerakan dan lain-lain</string>
+
+    <!-- Cycle through ringer modes -->
+    <string name="volume_dialog_ringer_guidance_normal">Panggilan dan notifikasi akan berdering</string>
 </resources>

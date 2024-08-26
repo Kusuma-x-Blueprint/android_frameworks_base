@@ -22,4 +22,7 @@
 
     <!-- Name of the VoWiFi status bar icon. -->
     <string name="status_bar_vowifi">Panggilan Wi-Fi</string>
+
+    <!-- Status bar - icons -->
+    <string name="status_bar_icons_title">Ikon bilah status</string>
 </resources>
