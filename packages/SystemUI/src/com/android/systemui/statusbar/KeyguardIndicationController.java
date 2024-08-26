@@ -990,7 +990,8 @@ public class KeyguardIndicationController {
 
         String batteryInfo = "";
         if (mChargingWattage > 0) {
-            batteryInfo = batteryInfo + (mChargingWattage / mCurrentDivider / 1000) + "W";
+            batteryInfo = batteryInfo + "~" +
+                    Math.round((mChargingWattage / mCurrentDivider / 1000.0)) + "W";
         }
         if (mTemperature > 0) {
             batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
