@@ -351,7 +351,7 @@ public class NetworkTraffic extends TextView {
     }
 
     protected void setSpacingAndFonts() {
-        setTextAppearance(R.style.TextAppearance_QS_Status);
+        setTextAppearance(R.style.TextAppearance_QS_Status_NetworkTraffic);
         setLineSpacing(0.88f, 0.88f);
     }
 

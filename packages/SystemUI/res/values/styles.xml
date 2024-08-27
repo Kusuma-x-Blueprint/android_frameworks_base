@@ -155,6 +155,10 @@
         <item name="android:textColor">?android:attr/textColorSecondary</item>
     </style>
 
+    <style name="TextAppearance.QS.Status.NetworkTraffic" parent="@style/TextAppearance.QS.Status">
+        <item name="android:fontFamily">@*android:string/config_headlineFontFamilyMedium</item>
+    </style>
+
     <style name="TextAppearance.DeviceManagementDialog.Title" parent="@android:style/TextAppearance.DeviceDefault.DialogWindowTitle"/>
 
     <style name="TextAppearance.AuthCredential">
