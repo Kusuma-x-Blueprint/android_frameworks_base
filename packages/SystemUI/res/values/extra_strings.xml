@@ -47,4 +47,7 @@
 
     <!-- Network traffic -->
     <string name="network_traffic_title">Network traffic</string>
+    <string name="network_traffic_off">Don\'t show this icon</string>
+    <string name="network_traffic_autohide">Show when there is network traffic (default)</string>
+    <string name="network_traffic_on">Always show</string>
 </resources>

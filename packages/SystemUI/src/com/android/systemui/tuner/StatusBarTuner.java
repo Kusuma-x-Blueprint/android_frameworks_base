@@ -20,9 +20,9 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.view.MenuItem;
 
+import androidx.preference.DropDownPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragment;
-import androidx.preference.SwitchPreference;
 
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
@@ -32,16 +32,42 @@ public class StatusBarTuner extends PreferenceFragment {
 
     private static final String NETWORK_TRAFFIC = "network_traffic_enabled";
 
-    private SwitchPreference mNetMonitor;
+    private DropDownPreference mNetMonitor;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         setHasOptionsMenu(true);
-        mNetMonitor = (SwitchPreference) findPreference(NETWORK_TRAFFIC);
-        mNetMonitor.setChecked(Settings.System.getIntForUser(getActivity().getContentResolver(),
-            Settings.System.NETWORK_TRAFFIC_ENABLED, 0,
-            UserHandle.USER_CURRENT) == 1);
+
+        mNetMonitor = (DropDownPreference) findPreference(NETWORK_TRAFFIC);
+        int networkTrafficEnabled = Settings.System.getIntForUser(getActivity().getContentResolver(),
+                    Settings.System.NETWORK_TRAFFIC_ENABLED, 1, UserHandle.USER_CURRENT);
+        int networkTrafficAutohide = Settings.System.getIntForUser(getActivity().getContentResolver(),
+                    Settings.System.NETWORK_TRAFFIC_AUTOHIDE, 1, UserHandle.USER_CURRENT);
+        int networkTrafficValue;
+        if (networkTrafficEnabled == 1 && networkTrafficAutohide == 1) {
+            networkTrafficValue = 1;
+        } else if (networkTrafficEnabled == 0 && networkTrafficAutohide == 0) {
+            networkTrafficValue = 2;
+        } else {
+            networkTrafficValue = 0;
+        }
+
+        mNetMonitor.setValue(String.valueOf(networkTrafficValue));
+        mNetMonitor.setSummary(mNetMonitor.getEntry());
+
+        mNetMonitor.setOnPreferenceChangeListener((preference, newValue) -> {
+            int selectedValue = Integer.parseInt((String) newValue);
+            int enabled = (selectedValue == 2) ? 0 : 1;
+            int autohide = (selectedValue == 1) ? 1 : 0;
+
+            Settings.System.putIntForUser(getActivity().getContentResolver(),
+                    Settings.System.NETWORK_TRAFFIC_ENABLED, enabled, UserHandle.USER_CURRENT);
+            Settings.System.putIntForUser(getActivity().getContentResolver(),
+                    Settings.System.NETWORK_TRAFFIC_AUTOHIDE, autohide, UserHandle.USER_CURRENT);
+            preference.setSummary(mNetMonitor.getEntries()[mNetMonitor.findIndexOfValue((String) newValue)]);
+            return true;
+        });
     }
 
     @Override
@@ -64,10 +90,7 @@ public class StatusBarTuner extends PreferenceFragment {
     @Override
     public boolean onPreferenceTreeClick(Preference preference) {
         if (preference == mNetMonitor) {
-            boolean checked = ((SwitchPreference)preference).isChecked();
-            Settings.System.putIntForUser(getActivity().getContentResolver(),
-                    Settings.System.NETWORK_TRAFFIC_ENABLED, checked ? 1 : 0,
-                    UserHandle.USER_CURRENT);
+            // The OnPreferenceChangeListener handles the click
             return true;
         }
         return super.onPreferenceTreeClick(preference);
