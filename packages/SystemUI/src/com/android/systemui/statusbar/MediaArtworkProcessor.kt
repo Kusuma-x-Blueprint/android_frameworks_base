@@ -29,30 +29,51 @@ import com.android.systemui.statusbar.notification.MediaNotificationProcessor
 import javax.inject.Inject
 
 private const val TAG = "MediaArtworkProcessor"
-private const val DOWNSAMPLE = 2
 
 @SysUISingleton
 class MediaArtworkProcessor @Inject constructor() {
 
-    private val mTmpSize = Point()
     private var mArtworkCache: Bitmap? = null
 
     fun processArtwork(context: Context, artwork: Bitmap): Bitmap? {
-        if (mArtworkCache != null) {
-            return mArtworkCache
+        // Return cached artwork if available
+        mArtworkCache?.let {
+            return it
         }
+    
         var inBitmap: Bitmap? = null
         try {
             @Suppress("DEPRECATION")
-            context.display?.getSize(mTmpSize)
+            val displaySize = Point()
+            context.display?.getSize(displaySize)
+    
+            // Calculate the aspect ratio of the display
+            val displayAspectRatio = displaySize.x.toFloat() / displaySize.y
+    
+            // Set DOWNSAMPLE based on display aspect ratio
+            val DOWNSAMPLE = displayAspectRatio
+    
+            // Calculate the maximum allowed size for the artwork
+            val maxWidth = displaySize.x * DOWNSAMPLE
+            val maxHeight = displaySize.y * DOWNSAMPLE
+    
+            // Fit the artwork into the display size using the DOWNSAMPLE factor
             val rect = Rect(0, 0, artwork.width, artwork.height)
-            MathUtils.fitRect(rect, Math.max(mTmpSize.x / DOWNSAMPLE, mTmpSize.y / DOWNSAMPLE))
-            inBitmap = Bitmap.createScaledBitmap(artwork, rect.width(), rect.height(),
-                    true /* filter */)
-            val outBitmap = inBitmap.copy(inBitmap.getConfig(), true)
+            MathUtils.fitRect(rect, Math.max(maxWidth.toInt(), maxHeight.toInt()))
+    
+            // Scale the artwork to fit within the calculated dimensions
+            inBitmap = Bitmap.createScaledBitmap(artwork, rect.width(), rect.height(), true)
+    
+            // Create a mutable copy of the scaled bitmap
+            val outBitmap = inBitmap.copy(inBitmap.config ?: Bitmap.Config.ARGB_8888, true)
+    
+            // Cache the result
+            mArtworkCache = outBitmap
+    
             return outBitmap
+    
         } catch (ex: IllegalArgumentException) {
-            Log.e(TAG, "error while processing artwork", ex)
+            Log.e(TAG, "Error while processing artwork", ex)
             return null
         } finally {
             inBitmap?.recycle()
