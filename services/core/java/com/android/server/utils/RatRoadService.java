@@ -14,6 +14,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Environment;
+import android.os.SELinux;
 import android.os.SystemProperties;
 import android.util.Log;
 
@@ -99,6 +100,9 @@ public final class RatRoadService extends SystemService {
             writer.write(data);
             // Set -rw-r--r-- (644) permission to make it readable by others.
             file.setReadable(true, false);
+            // Set the SELinux context of the file to "extra_rr_data_file".
+            String selinuxContext = "u:object_r:extra_rr_data_file:s0";
+            SELinux.setFileContext(file.getAbsolutePath(), selinuxContext);
         } catch (IOException e) {
             Log.e(TAG, "Error writing to file", e);
         }
