@@ -5146,14 +5146,26 @@ public class AudioService extends IAudioService.Stub
 
         switch(silenceRingerSetting) {
             case VOLUME_HUSH_MUTE:
-                effect = VibrationEffect.get(VibrationEffect.EFFECT_DOUBLE_CLICK);
-                ringerMode = AudioManager.RINGER_MODE_SILENT;
-                toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_silent;
+                if (mRingerMode == AudioManager.RINGER_MODE_SILENT) {
+                    effect = VibrationEffect.get(VibrationEffect.EFFECT_HEAVY_CLICK);
+                    ringerMode = AudioManager.RINGER_MODE_NORMAL;
+                    toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_normal;
+                } else { 
+                    effect = VibrationEffect.get(VibrationEffect.EFFECT_DOUBLE_CLICK);
+                    ringerMode = AudioManager.RINGER_MODE_SILENT;
+                    toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_silent;
+                }
                 break;
             case VOLUME_HUSH_VIBRATE:
-                effect = VibrationEffect.get(VibrationEffect.EFFECT_HEAVY_CLICK);
-                ringerMode = AudioManager.RINGER_MODE_VIBRATE;
-                toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate;
+                if (mRingerMode == AudioManager.RINGER_MODE_VIBRATE) {
+                    effect = VibrationEffect.get(VibrationEffect.EFFECT_HEAVY_CLICK);
+                    ringerMode = AudioManager.RINGER_MODE_NORMAL;
+                    toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_normal;
+                } else {
+                    effect = VibrationEffect.get(VibrationEffect.EFFECT_HEAVY_CLICK);
+                    ringerMode = AudioManager.RINGER_MODE_VIBRATE;
+                    toastText = com.android.internal.R.string.volume_dialog_ringer_guidance_vibrate;
+                }
                 break;
         }
         maybeVibrate(effect, reason);
