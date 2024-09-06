@@ -731,6 +731,15 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
                 }
             }
         }
+
+        @Override
+        public void onCustomGestureAction(String action) {
+            if (mBar != null) {
+                try {
+                    mBar.onCustomGestureAction(action);
+                } catch (RemoteException e) { }
+            }
+        }
     };
 
     private final GlobalActionsProvider mGlobalActionsProvider = new GlobalActionsProvider() {

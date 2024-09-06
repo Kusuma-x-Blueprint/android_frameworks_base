@@ -199,4 +199,11 @@ public interface StatusBarManagerInternal {
      * @see com.android.internal.statusbar.IStatusBar#showMediaOutputSwitcher
      */
     void showMediaOutputSwitcher(String packageName);
+
+    /**
+     * Launch custom action on gesture.
+     *
+     * @see com.android.internal.statusbar.IStatusBar#onCustomGestureAction
+     */
+    void onCustomGestureAction(String action);
 }

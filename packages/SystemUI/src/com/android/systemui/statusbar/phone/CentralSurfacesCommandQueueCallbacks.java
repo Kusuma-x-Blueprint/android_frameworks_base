@@ -27,13 +27,24 @@ import android.app.StatusBarManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.media.session.MediaController;
+import android.media.session.MediaSessionManager;
+import android.media.session.MediaSession;
+import android.media.session.MediaController.TransportControls;
+import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.UserHandle;
 import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Slog;
 import android.view.InsetsState.InternalInsetsType;
@@ -42,6 +53,7 @@ import android.view.KeyEvent;
 import android.view.WindowInsetsController.Appearance;
 import android.view.WindowInsetsController.Behavior;
 
+import com.android.internal.app.AssistUtils;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.internal.statusbar.LetterboxDetails;
@@ -50,9 +62,12 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.R;
 import com.android.systemui.assist.AssistManager;
 import com.android.systemui.camera.CameraIntents;
+import com.android.systemui.controls.dagger.ControlsComponent;
+import com.android.systemui.controls.ui.ControlsUiController;
 import com.android.systemui.dagger.qualifiers.DisplayId;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
+import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QSPanelController;
 import com.android.systemui.settings.UserTracker;
@@ -69,7 +84,9 @@ import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 import com.android.systemui.statusbar.policy.HeadsUpManager;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.RemoteInputQuickSettingsDisabler;
+import com.android.systemui.wallet.controller.QuickAccessWalletController;
 
+import java.util.List;
 import java.util.Optional;
 
 import javax.inject.Inject;
@@ -108,6 +125,9 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private final Lazy<CameraLauncher> mCameraLauncherLazy;
     private final QuickSettingsController mQsController;
     private final QSHost mQSHost;
+    private final ControlsComponent mControlsComponent;
+    private final QuickAccessWalletController mWalletController;
+    private final ActivityStarter mActivityStarter;
 
     private static final VibrationAttributes HARDWARE_FEEDBACK_VIBRATION_ATTRIBUTES =
             VibrationAttributes.createForUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK);
@@ -141,7 +161,10 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
             SystemBarAttributesListener systemBarAttributesListener,
             Lazy<CameraLauncher> cameraLauncherLazy,
             UserTracker userTracker,
-            QSHost qsHost) {
+            QSHost qsHost,
+            ControlsComponent controlsComponent,
+            QuickAccessWalletController walletController,
+            ActivityStarter activityStarter) {
         mCentralSurfaces = centralSurfaces;
         mQsController = quickSettingsController;
         mContext = context;
@@ -168,6 +191,9 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
         mCameraLauncherLazy = cameraLauncherLazy;
         mUserTracker = userTracker;
         mQSHost = qsHost;
+        mControlsComponent = controlsComponent;
+        mWalletController = walletController;
+        mActivityStarter = activityStarter;
 
         mVibrateOnOpening = resources.getBoolean(R.bool.config_vibrateOnIconAnimation);
         mCameraLaunchGestureVibrationEffect = getCameraGestureVibrationEffect(
@@ -416,6 +442,42 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     }
 
     @Override
+    public void onCustomGestureAction(String action) {
+        if (action == null) {
+            return;
+        }
+
+        String[] resolvedAction = action.split(":", 2);
+        String actionType = resolvedAction[0];
+        String actionParams = (resolvedAction.length == 2) ? resolvedAction[1] : null;
+
+        switch (actionType) {
+            case "camera":
+                onCameraLaunchGestureDetected(
+                        StatusBarManager.CAMERA_LAUNCH_SOURCE_POWER_DOUBLE_TAP);
+                break;
+            case "assistant":
+                launchAssistAction();
+                break;
+            case "togglemedia":
+                toggleMediaPlayback();
+                break;
+            case "qr":
+                launchQrAction();
+                break;
+            case "wallet":
+                launchWalletAction();
+                break;
+            case "devicecontrol":
+                launchDeviceControlAction();
+                break;
+            case "customapp":
+                launchApp();
+                break;
+        }
+    }
+
+    @Override
     public void onEmergencyActionLaunchGestureDetected() {
         Intent emergencyIntent = mCentralSurfaces.getEmergencyActionIntent();
 
@@ -470,7 +532,6 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     public void onRecentsAnimationStateChanged(boolean running) {
         mCentralSurfaces.setInteracting(StatusBarManager.WINDOW_NAVIGATION_BAR, running);
     }
-
 
     @Override
     public void onSystemBarAttributesChanged(int displayId, @Appearance int appearance,
@@ -574,6 +635,114 @@ public class CentralSurfacesCommandQueueCallbacks implements CommandQueue.Callba
     private boolean isWakingUpOrAwake() {
         return mWakefulnessLifecycle.getWakefulness() == WAKEFULNESS_AWAKE
                 || mWakefulnessLifecycle.getWakefulness() == WAKEFULNESS_WAKING;
+    }
+
+    private static boolean isPackageInstalled(Context context, String pkg, boolean ignoreState) {
+        if (pkg != null) {
+            try {
+                PackageInfo pi = context.getPackageManager().getPackageInfo(pkg,
+                        PackageManager.PackageInfoFlags.of(0));
+                if (!pi.applicationInfo.enabled && !ignoreState) {
+                    return false;
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void launchApp() {
+        Intent intent = null;
+        String packageName = Settings.System.getStringForUser(mContext.getContentResolver(),
+                Settings.System.POWER_DOUBLE_TAP_APP_ACTION, UserHandle.USER_CURRENT);
+        String activity = Settings.System.getStringForUser(mContext.getContentResolver(),
+                Settings.System.POWER_DOUBLE_TAP_APP_ACTIVITY_ACTION, UserHandle.USER_CURRENT);
+        boolean launchActivity = activity != null && !TextUtils.equals("NONE", activity);
+        try {
+            if (launchActivity) {
+                intent = new Intent(Intent.ACTION_MAIN);
+                intent.setClassName(packageName, activity);
+            } else {
+                intent = mContext.getPackageManager().getLaunchIntentForPackage(packageName);
+            }
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            mCentralSurfaces.startActivity(intent, true);
+            vibrateForCameraGesture();
+        } catch (Exception e) {
+            // do nothing.
+        }
+    }
+
+    private void launchAssistAction() {
+        // Add Intent Extra data.
+        Bundle args = new Bundle();
+        int deviceId = Integer.MIN_VALUE;
+        long eventTime = System.currentTimeMillis();
+        int invocationType = AssistUtils.INVOCATION_TYPE_UNKNOWN;
+	    
+        args.putInt(Intent.EXTRA_ASSIST_INPUT_DEVICE_ID, deviceId);
+        args.putLong(Intent.EXTRA_TIME, eventTime);
+        args.putInt(AssistUtils.INVOCATION_TYPE_KEY, invocationType);
+	    
+        // Launch the assist service with the arguments.
+        startAssist(args);
+        vibrateForCameraGesture();
+    }
+
+    private void launchDeviceControlAction() {
+        if (mControlsComponent.isEnabled()) {
+            Intent intent = new Intent();
+            ComponentName componentName = new ComponentName(mContext, 
+                    mControlsComponent.getControlsUiController().get().resolveActivity());
+            intent.setComponent(componentName);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            intent.putExtra(ControlsUiController.EXTRA_ANIMATE, true);
+            mCentralSurfaces.startActivity(intent, false);
+            vibrateForCameraGesture();
+        }
+    }
+
+    private void launchQrAction() {
+        String qrCodeScannerActivity = "net.hearnsoft.qrcodescanner/.QRCodeScannerActivity";
+        if (!isPackageInstalled(mContext, "net.hearnsoft.qrcodescanner", false)) {
+            qrCodeScannerActivity = mContext.getResources().getString(
+                com.android.internal.R.string.config_defaultQrCodeComponent);
+        }
+        if (qrCodeScannerActivity != null) {
+            Intent intent = new Intent();
+            ComponentName componentName = ComponentName.unflattenFromString(qrCodeScannerActivity);
+            intent.setComponent(componentName);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            mCentralSurfaces.startActivity(intent, true);
+            vibrateForCameraGesture();
+        }
+    }
+
+    private void launchWalletAction() {
+        if (mWalletController.getWalletClient().isWalletServiceAvailable()) {
+            mWalletController.startQuickAccessUiIntent(mActivityStarter, null, true);
+            vibrateForCameraGesture();
+        }
+    }
+
+    public void toggleMediaPlayback() {
+        MediaSessionManager mediaSessionManager = (MediaSessionManager) mContext.getSystemService(Context.MEDIA_SESSION_SERVICE);
+        if (mediaSessionManager == null) {
+            return;
+        }
+    
+        List<MediaController> controllers = mediaSessionManager.getActiveSessions(null);
+        for (MediaController controller : controllers) {
+            TransportControls controls = controller.getTransportControls();
+            if (controller.getPlaybackState().getState() == PlaybackState.STATE_PLAYING) {
+                controls.pause();
+            } else {
+                controls.play();
+            }
+            break;
+        }
     }
 
     private void vibrateForCameraGesture() {

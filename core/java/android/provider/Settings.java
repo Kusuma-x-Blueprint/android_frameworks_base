@@ -5605,6 +5605,26 @@ public final class Settings {
         public static final String ENABLE_ROTATION_BUTTON = "enable_rotation_button";
 
         /**
+         * Power double tap app action
+         * @hide
+         */
+        public static final String POWER_DOUBLE_TAP_APP_ACTION = "power_double_tap_app_action";
+
+        /**
+         * Display friendly name of custom application launched when
+         * using the power double tap app action
+         * @hide
+         */
+        public static final String POWER_DOUBLE_TAP_APP_FR_ACTION = "power_double_tap_app_fr_action";
+
+        /**
+         * Launch custom activity when using the power double tap app action
+         *
+         * @hide
+         */
+        public static final String POWER_DOUBLE_TAP_APP_ACTIVITY_ACTION = "power_double_tap_app_activity_action";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
@@ -11286,6 +11306,12 @@ public final class Settings {
          * @hide
          */
         public static final String SHOW_SCREENSHOT_OVERLAY = "show_screenshot_overlay";
+
+        /**
+         * Control key action of power key double tap.
+         * @hide
+         */
+        public static final String POWER_DOUBLE_TAP_ACTION = "power_double_tap_action";
 
         /**
          * These entries are considered common between the personal and the managed profile,
