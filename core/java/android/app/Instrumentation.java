@@ -57,6 +57,7 @@ import android.view.WindowManagerGlobal;
 
 import com.android.internal.app.StorageScopesAppHooks;
 import com.android.internal.content.ReferrerIntent;
+import com.android.internal.util.AppProfileHooks;
 import com.android.internal.util.RatRoadHooks;
 
 import java.io.File;
@@ -1244,6 +1245,7 @@ public class Instrumentation {
         Application app = getFactory(context.getPackageName())
                 .instantiateApplication(cl, className);
         app.attach(context);
+        AppProfileHooks.setProfile(context);
         RatRoadHooks.setProps(context);
         return app;
     }
@@ -1262,6 +1264,7 @@ public class Instrumentation {
             ClassNotFoundException {
         Application app = (Application)clazz.newInstance();
         app.attach(context);
+        AppProfileHooks.setProfile(context);
         RatRoadHooks.setProps(context);
         return app;
     }

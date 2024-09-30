@@ -5625,6 +5625,13 @@ public final class Settings {
         public static final String POWER_DOUBLE_TAP_APP_ACTIVITY_ACTION = "power_double_tap_app_activity_action";
 
         /**
+         * Set system profile based on launched apps
+         * @hide
+         */
+        @Readable
+        public static final String PROFILE_APP_TRIGGER_LIST = "profile_app_trigger_list";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
