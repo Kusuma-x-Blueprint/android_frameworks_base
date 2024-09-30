@@ -19,11 +19,13 @@ package com.android.systemui.navigationbar;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_3BUTTON;
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL;
+import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_GESTURAL_OVERLAY;
 
 import android.annotation.Nullable;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.om.IOverlayManager;
+import android.content.om.OverlayInfo;
 import android.content.res.Configuration;
 import android.graphics.drawable.Icon;
 import android.os.RemoteException;
@@ -128,6 +130,7 @@ public class NavigationBarInflaterView extends FrameLayout
     private boolean mInverseLayout;
     private boolean mIsHintEnabled;
     private boolean mIsKeyboardHintEnabled;
+    private boolean mIsAttachedToWindow;
 
     public NavigationBarInflaterView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -192,10 +195,12 @@ public class NavigationBarInflaterView extends FrameLayout
         Dependency.get(TunerService.class).addTunable(this, NAVBAR_LAYOUT_VIEWS);
         Dependency.get(TunerService.class).addTunable(this, KEY_NAVIGATION_HINT);
         Dependency.get(TunerService.class).addTunable(this, KEY_NAVIGATION_HINT_KEYBOARD);
+        mIsAttachedToWindow = true;
     }
 
     @Override
     protected void onDetachedFromWindow() {
+        mIsAttachedToWindow = false;
         Dependency.get(NavigationModeController.class).removeListener(this);
         Dependency.get(TunerService.class).removeTunable(this);
         super.onDetachedFromWindow();
@@ -222,6 +227,7 @@ public class NavigationBarInflaterView extends FrameLayout
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        updateHint();
         updateLayoutInversion();
     }
 
@@ -284,25 +290,26 @@ public class NavigationBarInflaterView extends FrameLayout
     }
 
     private void updateHint() {
-        final IOverlayManager iom = IOverlayManager.Stub.asInterface(
-                ServiceManager.getService(Context.OVERLAY_SERVICE));
-        final boolean state = mNavBarMode == NAV_BAR_MODE_GESTURAL && !mIsHintEnabled;
-        final int userId = ActivityManager.getCurrentUser();
-        String overlay = mIsKeyboardHintEnabled ? OVERLAY_NAVIGATION_HIDE_HINT :
-                OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD;
-        try {
-            iom.setEnabled(OVERLAY_NAVIGATION_HIDE_HINT, state && 
-                    mIsKeyboardHintEnabled, userId);
-            iom.setEnabled(OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD, state && 
-                    !mIsKeyboardHintEnabled, userId);
-            if (state) {
-                // As overlays are also used to apply navigation mode, it is needed to set
-                // our customization overlay to highest priority to ensure it is applied.
-                iom.setHighestPriority(overlay, userId);
+        if (mIsAttachedToWindow && mNavBarMode == NAV_BAR_MODE_GESTURAL) {
+            String overlay = NAV_BAR_MODE_GESTURAL_OVERLAY;
+            if (!mIsHintEnabled) {
+                overlay = OVERLAY_NAVIGATION_HIDE_HINT;
+                if (!mIsKeyboardHintEnabled  &&
+                        mContext.getResources().getConfiguration().orientation == 
+                        Configuration.ORIENTATION_PORTRAIT) {
+                    overlay = OVERLAY_NAVIGATION_HIDE_HINT_KEYBOARD;
+                }
             }
-        } catch (IllegalArgumentException | RemoteException e) {
-            Log.e(TAG, "Failed to " + (state ? "enable" : "disable")
-                    + " overlay " + overlay + " for user " + userId);
+            try {
+                int userId = ActivityManager.getCurrentUser();
+                IOverlayManager om = IOverlayManager.Stub.asInterface(
+                        ServiceManager.getService(Context.OVERLAY_SERVICE));
+                OverlayInfo info = om.getOverlayInfo(overlay, userId);
+                if (info != null && !info.isEnabled())
+                    om.setEnabledExclusiveInCategory(overlay, userId);
+            } catch (Exception e) {
+                Log.e(TAG, "Error occurred while enabling overlay: " + overlay, e);
+            }
         }
     }
 
