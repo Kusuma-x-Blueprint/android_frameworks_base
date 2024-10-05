@@ -23,6 +23,9 @@
 
     <!-- Network traffic -->
     <string name="network_traffic_title">Lalu lintas jaringan</string>
+    <string name="network_traffic_off">Jangan tampilkan ikon ini</string>
+    <string name="network_traffic_autohide">Tampilkan saat ada lalu lintas jaringan (default)</string>
+    <string name="network_traffic_on">Selalu tampilkan</string>
 
     <!-- Face unlock -->
     <string name="face_unlock_recognizing">Mengenali wajah...</string>
