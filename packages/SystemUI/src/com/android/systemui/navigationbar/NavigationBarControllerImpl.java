@@ -230,6 +230,11 @@ public class NavigationBarControllerImpl implements
      */
     @Override
     public boolean canCreateNavBarOrTaskBar(int displayId) {
+        // Navbar can be toggled at runtime on default display
+        if (displayId == mDisplayTracker.getDefaultDisplayId()) {
+            return updateHasNavBarForDisplay(displayId);
+        }
+
         if (mHasNavBarOrTaskbar.indexOfKey(displayId) > -1) {
             return mHasNavBarOrTaskbar.get(displayId);
         }
