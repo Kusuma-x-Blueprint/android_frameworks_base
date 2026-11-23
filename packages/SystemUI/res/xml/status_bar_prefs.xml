@@ -96,6 +96,12 @@
         android:key="mobile"
         android:title="@string/quick_settings_cellular_detail_title" />
 
+    <com.android.systemui.tuner.NetworkTrafficPreference
+        android:icon="@drawable/ic_statusbar_network_traffic"
+        android:title="@string/status_bar_network_traffic_title"
+        android:summary="%s"
+        android:entries="@array/network_traffic_options" />
+
     <com.android.systemui.tuner.StatusBarSwitch
         android:icon="@drawable/ic_statusbar_airplanemode"
         android:key="airplane"
