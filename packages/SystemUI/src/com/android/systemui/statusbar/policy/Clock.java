@@ -26,6 +26,7 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.icu.lang.UCharacter;
 import android.icu.text.DateTimePatternGenerator;
@@ -112,6 +113,8 @@ public class Clock extends TextView implements
     private boolean mShowSeconds;
     private ContentObserver mContentObserver;
     private Handler mSecondsHandler;
+    private int mMaxClockWidth = -1;
+    private int mLastTextLength = -1;
 
     // Tracks config changes that will make the clock change dimensions
     private final InterestingConfigChanges mInterestingConfigChanges;
@@ -411,6 +414,7 @@ public class Clock extends TextView implements
 
     private void reloadDimens() {
         FontSizeUtils.updateFontSize(this, R.dimen.status_bar_clock_size);
+        mMaxClockWidth = -1;
 
         // Note: The padding for the clock in the shade is controlled by ShadeHeaderController so
         // this just affects the status bar clock.
@@ -443,6 +447,7 @@ public class Clock extends TextView implements
     }
 
     private void updateShowSeconds() {
+        mMaxClockWidth = -1;
         if (mShowSeconds) {
             // Wait until we have a display to start trying to show seconds.
             if (mSecondsHandler == null && getDisplay() != null) {
@@ -465,6 +470,54 @@ public class Clock extends TextView implements
                 updateClock();
             }
         }
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        if (mShowSeconds) {
+            int maxWidth = calculateMaxClockWidth();
+            if (maxWidth > getMeasuredWidth()) {
+                setMeasuredDimension(maxWidth, getMeasuredHeight());
+            }
+        }
+    }
+
+    private int calculateMaxClockWidth() {
+        CharSequence text = getText();
+        if (TextUtils.isEmpty(text)) {
+            return 0;
+        }
+        int textLength = text.length();
+        if (mMaxClockWidth > 0 && textLength == mLastTextLength) {
+            return mMaxClockWidth;
+        }
+
+        mLastTextLength = textLength;
+        Paint paint = getPaint();
+        char widestDigit = '0';
+        float maxDigitWidth = 0f;
+        for (char c = '0'; c <= '9'; c++) {
+            float w = paint.measureText(String.valueOf(c));
+            if (w > maxDigitWidth) {
+                maxDigitWidth = w;
+                widestDigit = c;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder(textLength);
+        for (int i = 0; i < textLength; i++) {
+            char c = text.charAt(i);
+            if (c >= '0' && c <= '9') {
+                sb.append(widestDigit);
+            } else {
+                sb.append(c);
+            }
+        }
+
+        mMaxClockWidth = (int) Math.ceil(paint.measureText(sb.toString()))
+                + getCompoundPaddingLeft() + getCompoundPaddingRight();
+        return mMaxClockWidth;
     }
 
     private final CharSequence getSmallTime() {
