@@ -27,7 +27,7 @@
         android:id="@+id/network_traffic_view"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:maxLines="2"
+        android:singleLine="true"
         android:gravity="center_vertical"
         android:paddingStart="2dp"
         android:paddingEnd="2dp" />
