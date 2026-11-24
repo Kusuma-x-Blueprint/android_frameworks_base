@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 /**
- * Copyright (c) 2009, The Android Open Source Project
+ * Copyright (c) 2026 Pelita
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,4 +26,10 @@
         <item>Show when there is network traffic</item>
         <item>Always show</item>
     </string-array>
+
+    <!-- SysUI Tuner: Clock AM/PM title [CHAR LIMIT=NONE] -->
+    <string name="status_bar_am_pm_title">AM/PM</string>
+
+    <!-- SysUI Tuner: Clock AM/PM 24-hour summary [CHAR LIMIT=NONE] -->
+    <string name="status_bar_am_pm_info">24-hour clock is enabled</string>
 </resources>

@@ -131,6 +131,11 @@
         android:key="clock"
         android:title="@string/clock" />
 
+    <com.android.systemui.tuner.ClockAmPmSwitch
+        android:icon="@drawable/ic_statusbar_clock_am_pm"
+        android:key="status_bar_am_pm"
+        android:title="@string/status_bar_am_pm_title" />
+
     <com.android.systemui.tuner.TunerSwitch
         android:icon="@drawable/ic_statusbar_priority"
         android:key="low_priority"
