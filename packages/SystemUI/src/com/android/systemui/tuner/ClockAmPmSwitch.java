@@ -21,16 +21,23 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.text.format.DateFormat;
+import android.util.ArraySet;
 import android.util.AttributeSet;
 
 import androidx.preference.SwitchPreferenceCompat;
 
+import com.android.systemui.Dependency;
+import com.android.systemui.statusbar.phone.ui.StatusBarIconController;
+import com.android.systemui.tuner.TunerService.Tunable;
+
 import lineageos.providers.LineageSettings;
 
-public class ClockAmPmSwitch extends SwitchPreferenceCompat {
+public class ClockAmPmSwitch extends SwitchPreferenceCompat implements Tunable {
 
     private static final int AM_PM_STYLE_NORMAL = 0;
     private static final int AM_PM_STYLE_GONE = 2;
+
+    private boolean mClockVisible = true;
 
     private final ContentObserver mObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
         @Override
@@ -46,6 +53,7 @@ public class ClockAmPmSwitch extends SwitchPreferenceCompat {
     @Override
     public void onAttached() {
         super.onAttached();
+        Dependency.get(TunerService.class).addTunable(this, StatusBarIconController.ICON_HIDE_LIST);
         getContext().getContentResolver().registerContentObserver(
                 LineageSettings.System.getUriFor(LineageSettings.System.STATUS_BAR_AM_PM),
                 false, mObserver, ActivityManager.getCurrentUser());
@@ -58,12 +66,27 @@ public class ClockAmPmSwitch extends SwitchPreferenceCompat {
     @Override
     public void onDetached() {
         getContext().getContentResolver().unregisterContentObserver(mObserver);
+        Dependency.get(TunerService.class).removeTunable(this);
         super.onDetached();
     }
 
-    private void updateState() {
+    @Override
+    public void onTuningChanged(String key, String newValue) {
+        if (!StatusBarIconController.ICON_HIDE_LIST.equals(key)) {
+            return;
+        }
+        ArraySet<String> hideList = StatusBarIconController.getIconHideList(getContext(), newValue);
+        mClockVisible = !hideList.contains("clock");
+        updateVisibility();
+    }
+
+    private void updateVisibility() {
         final boolean is24Hour = DateFormat.is24HourFormat(getContext());
-        setVisible(!is24Hour);
+        setVisible(!is24Hour && mClockVisible);
+    }
+
+    private void updateState() {
+        updateVisibility();
 
         final int style = LineageSettings.System.getIntForUser(
                 getContext().getContentResolver(),
