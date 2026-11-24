@@ -32,4 +32,30 @@
 
     <!-- SysUI Tuner: Clock AM/PM 24-hour summary [CHAR LIMIT=NONE] -->
     <string name="status_bar_am_pm_info">24-hour clock is enabled</string>
+
+    <!-- SysUI Tuner: Clock position setting title [CHAR LIMIT=NONE] -->
+    <string name="tuner_clock_position">Clock position</string>
+
+    <!-- SysUI Tuner: Options for clock position [CHAR LIMIT=NONE] -->
+    <string-array name="clock_position_options">
+        <item>Show on the left (default)</item>
+        <item>Show in the center</item>
+        <item>Show on the right</item>
+    </string-array>
+
+    <string-array name="clock_position_options_notch">
+        <item>Show on the left (default)</item>
+        <item>Show on the right</item>
+    </string-array>
+
+    <string-array name="clock_position_options_rtl">
+        <item>Show on the right (default)</item>
+        <item>Show in the center</item>
+        <item>Show on the left</item>
+    </string-array>
+
+    <string-array name="clock_position_options_notch_rtl">
+        <item>Show on the right (default)</item>
+        <item>Show on the left</item>
+    </string-array>
 </resources>
