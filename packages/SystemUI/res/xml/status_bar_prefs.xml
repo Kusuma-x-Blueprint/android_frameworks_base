@@ -115,9 +115,23 @@
         android:title="@string/legacy_vpn_name" />
 
     <com.android.systemui.tuner.StatusBarSwitch
-        android:icon="@*android:drawable/ic_battery"
+        android:icon="@drawable/ic_statusbar_battery"
         android:key="battery"
         android:title="@string/battery" />
+
+    <com.android.systemui.tuner.BatteryStylePreference
+        android:icon="@drawable/ic_statusbar_battery_style"
+        android:key="status_bar_battery_style"
+        android:title="@string/tuner_battery_style"
+        android:summary="%s"
+        android:entries="@array/battery_style_options" />
+
+    <com.android.systemui.tuner.BatteryPercentagePreference
+        android:icon="@drawable/ic_statusbar_battery_percentage"
+        android:key="status_bar_show_battery_percent"
+        android:title="@string/tuner_battery_percentage"
+        android:summary="%s"
+        android:entries="@array/battery_percentage_options" />
 
     <com.android.systemui.tuner.StatusBarSwitch
         android:icon="@drawable/ic_statusbar_alarm"

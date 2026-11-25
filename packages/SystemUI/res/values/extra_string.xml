@@ -58,4 +58,25 @@
         <item>Show on the right (default)</item>
         <item>Show on the left</item>
     </string-array>
+
+    <!-- SysUI Tuner: Battery style setting title [CHAR LIMIT=NONE] -->
+    <string name="tuner_battery_style">Battery style</string>
+
+    <!-- SysUI Tuner: Options for battery style [CHAR LIMIT=NONE] -->
+    <string-array name="battery_style_options">
+        <item>Show horizontal icon (default)</item>
+        <item>Show circle icon</item>
+        <item>Show dotted circle icon</item>
+        <item>Show text only</item>
+    </string-array>
+
+    <!-- SysUI Tuner: Battery percentage setting title [CHAR LIMIT=NONE] -->
+    <string name="tuner_battery_percentage">Battery percentage</string>
+
+    <!-- SysUI Tuner: Options for battery percentage [CHAR LIMIT=NONE] -->
+    <string-array name="battery_percentage_options">
+        <item>Show percentage next to the icon</item>
+        <item>Show percentage inside the icon</item>
+        <item>Don\'t show percentage (default)</item>
+    </string-array>
 </resources>
