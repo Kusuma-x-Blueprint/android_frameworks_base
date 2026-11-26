@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.pipeline.icons.shared.model
 
 import android.content.Context
+import com.android.systemui.statusbar.phone.StatusBarLocation
 import com.android.systemui.statusbar.pipeline.shared.ui.view.ModernStatusBarView
 
 /**
@@ -26,4 +27,7 @@ import com.android.systemui.statusbar.pipeline.shared.ui.view.ModernStatusBarVie
  */
 fun interface ModernStatusBarViewCreator {
     fun createAndBind(context: Context): ModernStatusBarView
+
+    fun createAndBind(context: Context, location: StatusBarLocation): ModernStatusBarView =
+        createAndBind(context)
 }

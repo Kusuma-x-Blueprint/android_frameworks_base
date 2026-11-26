@@ -334,7 +334,7 @@ public class DemoStatusIcons extends StatusIconContainer implements DemoMode, Da
         // This doesn't do any correct ordering, and also doesn't check if we already have an
         // existing icon for the slot. But since we hope to remove this class soon, we won't spend
         // the time adding that logic.
-        ModernStatusBarView view = holder.getInitializer().createAndBind(mContext);
+        ModernStatusBarView view = holder.getInitializer().createAndBind(mContext, mLocation);
         addView(view, createLayoutParams());
     }
 

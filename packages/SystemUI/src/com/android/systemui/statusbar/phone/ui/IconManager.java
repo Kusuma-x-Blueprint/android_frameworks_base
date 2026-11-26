@@ -200,7 +200,7 @@ public class IconManager implements DemoModeCommandReceiver {
     protected StatusIconDisplayable addBindableIcon(BindableIconHolder holder,
             int index) {
         mBindableIcons.put(holder.getSlot(), holder);
-        ModernStatusBarView view = holder.getInitializer().createAndBind(mContext);
+        ModernStatusBarView view = holder.getInitializer().createAndBind(mContext, mLocation);
         mGroup.addView(view, index, onCreateLayoutParams(Shape.WRAP_CONTENT));
         if (mIsInDemoMode) {
             mDemoStatusIcons.addBindableIcon(holder);

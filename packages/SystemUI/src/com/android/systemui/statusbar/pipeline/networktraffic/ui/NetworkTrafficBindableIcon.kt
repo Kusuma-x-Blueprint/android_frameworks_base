@@ -18,9 +18,11 @@ package com.android.systemui.statusbar.pipeline.networktraffic.ui
 
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.statusbar.phone.StatusBarLocation
 import com.android.systemui.statusbar.pipeline.icons.shared.model.BindableIcon
 import com.android.systemui.statusbar.pipeline.icons.shared.model.ModernStatusBarViewCreator
 import com.android.systemui.statusbar.pipeline.networktraffic.ui.view.ModernStatusBarNetworkTrafficView
+import com.android.systemui.statusbar.pipeline.shared.ui.view.ModernStatusBarView
 import javax.inject.Inject
 
 @SysUISingleton
@@ -32,9 +34,21 @@ constructor(
     override val slot: String =
         context.getString(com.android.internal.R.string.status_bar_network_traffic)
 
-    override val initializer = ModernStatusBarViewCreator { context ->
-        ModernStatusBarNetworkTrafficView.constructAndBind(context, slot)
-    }
+    override val initializer =
+        object : ModernStatusBarViewCreator {
+            override fun createAndBind(context: Context): ModernStatusBarView =
+                ModernStatusBarNetworkTrafficView.constructAndBind(context, slot)
+
+            override fun createAndBind(
+                context: Context,
+                location: StatusBarLocation,
+            ): ModernStatusBarView =
+                ModernStatusBarNetworkTrafficView.constructAndBind(
+                    context,
+                    slot,
+                    blocked = location == StatusBarLocation.KEYGUARD,
+                )
+        }
 
     override val shouldBindIcon: Boolean = true
 }
