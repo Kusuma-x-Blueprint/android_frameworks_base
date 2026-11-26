@@ -221,7 +221,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
     private float mInputFocusTransferStartY;
     private long mInputFocusTransferStartMillis;
     private int mNavBarMode = NAV_BAR_MODE_3BUTTON;
-    private DeviceKeysConstants.Action mCornerSwipeAction = DeviceKeysConstants.Action.SEARCH;
+    private DeviceKeysConstants.Action mCornerLongSwipeAction = DeviceKeysConstants.Action.SEARCH;
 
     @VisibleForTesting
     public ISystemUiProxy mSysUiProxy = new ISystemUiProxy.Stub() {
@@ -465,7 +465,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
         @Override
         public void onAssistantProgress(@FloatRange(from = 0.0, to = 1.0) float progress) {
             verifyCallerAndClearCallingIdentityPostMain("onAssistantProgress", () -> {
-                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                if (mCornerLongSwipeAction == DeviceKeysConstants.Action.SEARCH) {
                     notifyAssistantProgress(progress);
                 }
             });
@@ -474,7 +474,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
         @Override
         public void onAssistantGestureCompletion(float velocity) {
             verifyCallerAndClearCallingIdentityPostMain("onAssistantGestureCompletion", () -> {
-                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                if (mCornerLongSwipeAction == DeviceKeysConstants.Action.SEARCH) {
                     notifyAssistantGestureCompletion(velocity);
                 }
             });
@@ -483,9 +483,9 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
         @Override
         public void startAssistant(Bundle bundle) {
             verifyCallerAndClearCallingIdentityPostMain("startAssistant", () -> {
-                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                if (mCornerLongSwipeAction == DeviceKeysConstants.Action.SEARCH) {
                     notifyStartAssistant(bundle);
-                } else if (mCornerSwipeAction != DeviceKeysConstants.Action.NOTHING) {
+                } else if (mCornerLongSwipeAction != DeviceKeysConstants.Action.NOTHING) {
                     final int displayId = mDisplayTracker.getDefaultDisplayId();
                     sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ASSIST, displayId, 0,
                             KeyEvent.FLAG_LONG_SWIPE);
@@ -795,7 +795,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
                 @Override
                 public void onUserChanged(int newUser, @NonNull Context userContext) {
                     mConnectionBackoffAttempts = 0;
-                    updateCornerSwipeAction();
+                    updateCornerLongSwipeAction();
                     internalConnectToCurrentUser("User changed");
                 }
             };
@@ -947,22 +947,23 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
         // Listen for assistant changes
         assistUtils.registerVoiceInteractionSessionListener(mVoiceInteractionSessionListener);
 
-        // Listen for custom corner swipe action changes
+        // Listen for custom corner long swipe action changes
         mContext.getContentResolver().registerContentObserver(
-                LineageSettings.System.getUriFor(LineageSettings.System.KEY_CORNER_SWIPE_ACTION),
+                LineageSettings.System.getUriFor(
+                        LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION),
                 false, new ContentObserver(mHandler) {
                     @Override
                     public void onChange(boolean selfChange) {
-                        updateCornerSwipeAction();
+                        updateCornerLongSwipeAction();
                     }
                 }, UserHandle.USER_ALL);
-        updateCornerSwipeAction();
+        updateCornerLongSwipeAction();
     }
 
-    private void updateCornerSwipeAction() {
-        mCornerSwipeAction = DeviceKeysConstants.Action.fromSettings(
+    private void updateCornerLongSwipeAction() {
+        mCornerLongSwipeAction = DeviceKeysConstants.Action.fromSettings(
                 mContext.getContentResolver(),
-                LineageSettings.System.KEY_CORNER_SWIPE_ACTION,
+                LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION,
                 DeviceKeysConstants.Action.SEARCH);
     }
 

@@ -703,7 +703,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private Action mAppSwitchPressAction;
     private Action mAppSwitchLongPressAction;
     private Action mEdgeLongSwipeAction;
-    private Action mCornerSwipeAction;
+    private Action mCornerLongSwipeAction;
 
     // support for activating the lock screen while the screen is on
     private HashSet<Integer> mAllowLockscreenWhenOnDisplays = new HashSet<>();
@@ -1053,7 +1053,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     LineageSettings.System.KEY_EDGE_LONG_SWIPE_ACTION), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(LineageSettings.System.getUriFor(
-                    LineageSettings.System.KEY_CORNER_SWIPE_ACTION), false, this,
+                    LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(LineageSettings.System.getUriFor(
                     LineageSettings.System.CAMERA_WAKE_SCREEN), false, this,
@@ -3312,7 +3312,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mAppSwitchLongPressAction = Action.fromIntSafe(res.getInteger(
                 org.lineageos.platform.internal.R.integer.config_longPressOnAppSwitchBehavior));
         mEdgeLongSwipeAction = Action.NOTHING;
-        mCornerSwipeAction = Action.SEARCH;
+        mCornerLongSwipeAction = Action.SEARCH;
 
         mBackLongPressAction = Action.fromSettings(resolver,
                 LineageSettings.System.KEY_BACK_LONG_PRESS_ACTION,
@@ -3353,9 +3353,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mEdgeLongSwipeAction = Action.fromSettings(resolver,
                 LineageSettings.System.KEY_EDGE_LONG_SWIPE_ACTION,
                 mEdgeLongSwipeAction);
-        mCornerSwipeAction = Action.fromSettings(resolver,
-                LineageSettings.System.KEY_CORNER_SWIPE_ACTION,
-                mCornerSwipeAction);
+        mCornerLongSwipeAction = Action.fromSettings(resolver,
+                LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION,
+                mCornerLongSwipeAction);
 
         mShortPressOnWindowBehavior = SHORT_PRESS_WINDOW_NOTHING;
         if (mPackageManager.hasSystemFeature(FEATURE_PICTURE_IN_PICTURE)) {
@@ -5535,11 +5535,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 break;
             }
             case KeyEvent.KEYCODE_ASSIST: {
-                boolean isCornerSwipe = (event.getFlags() & KeyEvent.FLAG_LONG_SWIPE) != 0;
-                if (isCornerSwipe) {
+                boolean isCornerLongSwipe = (event.getFlags() & KeyEvent.FLAG_LONG_SWIPE) != 0;
+                if (isCornerLongSwipe) {
                     if (mLongSwipeDown && !down) {
-                        // Trigger corner swipe action
-                        performKeyAction(mCornerSwipeAction, event,
+                        // Trigger corner long swipe action
+                        performKeyAction(mCornerLongSwipeAction, event,
                                 AssistUtils.INVOCATION_TYPE_GESTURE);
                         // Reset long swipe state
                         mLongSwipeDown = false;
