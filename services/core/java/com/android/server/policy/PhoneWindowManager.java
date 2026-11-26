@@ -703,6 +703,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private Action mAppSwitchPressAction;
     private Action mAppSwitchLongPressAction;
     private Action mEdgeLongSwipeAction;
+    private Action mCornerSwipeAction;
 
     // support for activating the lock screen while the screen is on
     private HashSet<Integer> mAllowLockscreenWhenOnDisplays = new HashSet<>();
@@ -828,6 +829,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private PendingIntent mTorchOffPendingIntent;
 
     private boolean mLongSwipeDown;
+    private boolean mCornerSwipeDown;
     private CameraAvailbilityListener mCameraAvailabilityListener;
     private ScreenshotHelper mScreenshotHelper;
 
@@ -1050,6 +1052,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(LineageSettings.System.getUriFor(
                     LineageSettings.System.KEY_EDGE_LONG_SWIPE_ACTION), false, this,
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(LineageSettings.System.getUriFor(
+                    LineageSettings.System.KEY_CORNER_SWIPE_ACTION), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(LineageSettings.System.getUriFor(
                     LineageSettings.System.CAMERA_WAKE_SCREEN), false, this,
@@ -3308,6 +3313,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mAppSwitchLongPressAction = Action.fromIntSafe(res.getInteger(
                 org.lineageos.platform.internal.R.integer.config_longPressOnAppSwitchBehavior));
         mEdgeLongSwipeAction = Action.NOTHING;
+        mCornerSwipeAction = Action.SEARCH;
 
         mBackLongPressAction = Action.fromSettings(resolver,
                 LineageSettings.System.KEY_BACK_LONG_PRESS_ACTION,
@@ -3348,6 +3354,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mEdgeLongSwipeAction = Action.fromSettings(resolver,
                 LineageSettings.System.KEY_EDGE_LONG_SWIPE_ACTION,
                 mEdgeLongSwipeAction);
+        mCornerSwipeAction = Action.fromSettings(resolver,
+                LineageSettings.System.KEY_CORNER_SWIPE_ACTION,
+                mCornerSwipeAction);
 
         mShortPressOnWindowBehavior = SHORT_PRESS_WINDOW_NOTHING;
         if (mPackageManager.hasSystemFeature(FEATURE_PICTURE_IN_PICTURE)) {
@@ -5134,7 +5143,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             // If key gesture is triggered outside policy, reset gesture handlers here
             mSingleKeyGestureDetector.reset();
         } else {
-            if ((event.getFlags() & KeyEvent.FLAG_FALLBACK) == 0) {
+            if ((event.getFlags() & KeyEvent.FLAG_FALLBACK) == 0
+                    && !(keyCode == KeyEvent.KEYCODE_ASSIST
+                    && (event.getFlags() & KeyEvent.FLAG_LONG_SWIPE) != 0)) {
                 handleKeyGesture(event, interactiveAndAwake, isDefaultDisplayOn);
             }
         }
@@ -5525,6 +5536,22 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 break;
             }
             case KeyEvent.KEYCODE_ASSIST: {
+                boolean isCornerSwipe = (event.getFlags() & KeyEvent.FLAG_LONG_SWIPE) != 0;
+                if (isCornerSwipe) {
+                    if (mCornerSwipeDown && !down) {
+                        // Trigger corner swipe action
+                        performKeyAction(mCornerSwipeAction, event,
+                                AssistUtils.INVOCATION_TYPE_GESTURE);
+                        // Reset corner swipe state
+                        mCornerSwipeDown = false;
+                        // Don't pass assist press to app
+                        result &= ~ACTION_PASS_TO_USER;
+                        break;
+                    }
+                    mCornerSwipeDown = down;
+                    result &= ~ACTION_PASS_TO_USER;
+                    break;
+                }
                 if (down) {
                     if (!interactive) {
                         isWakeKey = mWakeOnAssistKeyPress;

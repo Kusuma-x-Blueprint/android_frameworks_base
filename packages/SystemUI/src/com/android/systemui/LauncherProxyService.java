@@ -52,6 +52,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.ResolveInfo;
+import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.hardware.input.InputManager;
@@ -149,6 +150,10 @@ import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Provider;
 
+import lineageos.providers.LineageSettings;
+
+import org.lineageos.internal.util.DeviceKeysConstants;
+
 /**
  * Class to send information from SysUI to Launcher with a binder.
  */
@@ -216,6 +221,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
     private float mInputFocusTransferStartY;
     private long mInputFocusTransferStartMillis;
     private int mNavBarMode = NAV_BAR_MODE_3BUTTON;
+    private DeviceKeysConstants.Action mCornerSwipeAction = DeviceKeysConstants.Action.SEARCH;
 
     @VisibleForTesting
     public ISystemUiProxy mSysUiProxy = new ISystemUiProxy.Stub() {
@@ -458,20 +464,35 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
 
         @Override
         public void onAssistantProgress(@FloatRange(from = 0.0, to = 1.0) float progress) {
-            verifyCallerAndClearCallingIdentityPostMain("onAssistantProgress", () ->
-                    notifyAssistantProgress(progress));
+            verifyCallerAndClearCallingIdentityPostMain("onAssistantProgress", () -> {
+                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                    notifyAssistantProgress(progress);
+                }
+            });
         }
 
         @Override
         public void onAssistantGestureCompletion(float velocity) {
-            verifyCallerAndClearCallingIdentityPostMain("onAssistantGestureCompletion", () ->
-                    notifyAssistantGestureCompletion(velocity));
+            verifyCallerAndClearCallingIdentityPostMain("onAssistantGestureCompletion", () -> {
+                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                    notifyAssistantGestureCompletion(velocity);
+                }
+            });
         }
 
         @Override
         public void startAssistant(Bundle bundle) {
-            verifyCallerAndClearCallingIdentityPostMain("startAssistant", () ->
-                    notifyStartAssistant(bundle));
+            verifyCallerAndClearCallingIdentityPostMain("startAssistant", () -> {
+                if (mCornerSwipeAction == DeviceKeysConstants.Action.SEARCH) {
+                    notifyStartAssistant(bundle);
+                } else if (mCornerSwipeAction != DeviceKeysConstants.Action.NOTHING) {
+                    final int displayId = mDisplayTracker.getDefaultDisplayId();
+                    sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ASSIST, displayId, 0,
+                            KeyEvent.FLAG_LONG_SWIPE);
+                    sendEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ASSIST, displayId, 0,
+                            KeyEvent.FLAG_LONG_SWIPE);
+                }
+            });
         }
 
         @Override
@@ -774,6 +795,7 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
                 @Override
                 public void onUserChanged(int newUser, @NonNull Context userContext) {
                     mConnectionBackoffAttempts = 0;
+                    updateCornerSwipeAction();
                     internalConnectToCurrentUser("User changed");
                 }
             };
@@ -924,6 +946,24 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
 
         // Listen for assistant changes
         assistUtils.registerVoiceInteractionSessionListener(mVoiceInteractionSessionListener);
+
+        // Listen for custom corner swipe action changes
+        mContext.getContentResolver().registerContentObserver(
+                LineageSettings.System.getUriFor(LineageSettings.System.KEY_CORNER_SWIPE_ACTION),
+                false, new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateCornerSwipeAction();
+                    }
+                }, UserHandle.USER_ALL);
+        updateCornerSwipeAction();
+    }
+
+    private void updateCornerSwipeAction() {
+        mCornerSwipeAction = DeviceKeysConstants.Action.fromSettings(
+                mContext.getContentResolver(),
+                LineageSettings.System.KEY_CORNER_SWIPE_ACTION,
+                DeviceKeysConstants.Action.SEARCH);
     }
 
     public boolean isSystemOrVisibleBgUser() {
