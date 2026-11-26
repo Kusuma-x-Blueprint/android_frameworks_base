@@ -829,7 +829,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private PendingIntent mTorchOffPendingIntent;
 
     private boolean mLongSwipeDown;
-    private boolean mCornerSwipeDown;
     private CameraAvailbilityListener mCameraAvailabilityListener;
     private ScreenshotHelper mScreenshotHelper;
 
@@ -5538,17 +5537,17 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case KeyEvent.KEYCODE_ASSIST: {
                 boolean isCornerSwipe = (event.getFlags() & KeyEvent.FLAG_LONG_SWIPE) != 0;
                 if (isCornerSwipe) {
-                    if (mCornerSwipeDown && !down) {
+                    if (mLongSwipeDown && !down) {
                         // Trigger corner swipe action
                         performKeyAction(mCornerSwipeAction, event,
                                 AssistUtils.INVOCATION_TYPE_GESTURE);
-                        // Reset corner swipe state
-                        mCornerSwipeDown = false;
+                        // Reset long swipe state
+                        mLongSwipeDown = false;
                         // Don't pass assist press to app
                         result &= ~ACTION_PASS_TO_USER;
                         break;
                     }
-                    mCornerSwipeDown = down;
+                    mLongSwipeDown = down;
                     result &= ~ACTION_PASS_TO_USER;
                     break;
                 }
