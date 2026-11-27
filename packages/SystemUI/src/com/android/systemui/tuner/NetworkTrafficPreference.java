@@ -42,7 +42,6 @@ public class NetworkTrafficPreference extends DropDownPreference implements Tune
         super(context, attrs);
         mSlot = context.getString(com.android.internal.R.string.status_bar_network_traffic);
         setEntryValues(new CharSequence[] { BLACKLIST, AUTOHIDE, ON });
-        setDefaultValue(BLACKLIST);
     }
 
     @Override
