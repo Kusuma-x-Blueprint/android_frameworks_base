@@ -98,6 +98,10 @@ import java.util.concurrent.Executor;
 
 import javax.inject.Inject;
 
+import lineageos.providers.LineageSettings;
+
+import org.lineageos.internal.util.DeviceKeysConstants.Action;
+
 /**
  * Extracts shared elements between navbar and taskbar delegate to de-dupe logic and help them
  * experience the joys of friendship.
@@ -272,6 +276,10 @@ public final class NavBarHelper implements
                 false, mAssistContentObserver, UserHandle.USER_ALL);
         mContentResolver.registerContentObserver(
                 Settings.Secure.getUriFor(Settings.Secure.ASSIST_TOUCH_GESTURE_ENABLED),
+                false, mAssistContentObserver, UserHandle.USER_ALL);
+        mContentResolver.registerContentObserver(
+                LineageSettings.System.getUriFor(
+                        LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION),
                 false, mAssistContentObserver, UserHandle.USER_ALL);
 
         // Setup display rotation watcher
@@ -495,9 +503,17 @@ public final class NavBarHelper implements
                 Settings.Secure.ASSIST_TOUCH_GESTURE_ENABLED, gestureDefault ? 1 : 0,
                 mUserTracker.getUserId()) != 0;
 
+        final Action cornerLongSwipeAction = Action.fromIntSafe(
+                LineageSettings.System.getIntForUser(mContentResolver,
+                        LineageSettings.System.KEY_CORNER_LONG_SWIPE_ACTION,
+                        Action.SEARCH.ordinal(), mUserTracker.getUserId()));
+        final boolean hasAssistantOrCustomAction = assistantAvailableForUser
+                || (cornerLongSwipeAction != Action.SEARCH
+                && cornerLongSwipeAction != Action.NOTHING);
+
         boolean supportsSwipeGesture = QuickStepContract.isGesturalMode(mNavBarMode)
                 || (QuickStepContract.isLegacyMode(mNavBarMode) && Flags.threeButtonCornerSwipe());
-        mAssistantAvailable = assistantAvailableForUser
+        mAssistantAvailable = hasAssistantOrCustomAction
                 && mAssistantTouchGestureEnabled
                 && supportsSwipeGesture;
         dispatchAssistantEventUpdate(mAssistantAvailable, mLongPressHomeEnabled);
