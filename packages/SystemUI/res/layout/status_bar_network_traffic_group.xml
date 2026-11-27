@@ -28,9 +28,9 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:textAppearance="@style/TextAppearance.StatusBar.Default"
-        android:singleLine="true"
+        android:maxLines="2"
         android:includeFontPadding="false"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:paddingStart="2dp"
         android:paddingEnd="2dp" />
 
