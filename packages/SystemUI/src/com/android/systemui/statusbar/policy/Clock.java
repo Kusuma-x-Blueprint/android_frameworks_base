@@ -26,8 +26,8 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
-import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.icu.lang.UCharacter;
 import android.icu.text.DateTimePatternGenerator;
 import android.os.Bundle;
@@ -35,8 +35,10 @@ import android.os.Handler;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.os.UserHandle;
+import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.style.CharacterStyle;
@@ -66,10 +68,13 @@ import com.android.systemui.tuner.TunerService.Tunable;
 
 import lineageos.providers.LineageSettings;
 
+import java.text.DecimalFormat;
+import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.TimeZone;
 
 /**
@@ -114,7 +119,14 @@ public class Clock extends TextView implements
     private ContentObserver mContentObserver;
     private Handler mSecondsHandler;
     private int mMaxClockWidth = -1;
-    private int mLastTextLength = -1;
+    private int mSecondStart = -1;
+    private int mSecondEnd = -1;
+    private String mWidestSeconds;
+    private CharSequence mLastPrefix;
+    private CharSequence mLastSuffix;
+    private float mLastTextSize = -1f;
+    private Typeface mLastTypeface;
+    private int mLastCompoundPadding = -1;
 
     // Tracks config changes that will make the clock change dimensions
     private final InterestingConfigChanges mInterestingConfigChanges;
@@ -155,6 +167,7 @@ public class Clock extends TextView implements
                     mContentDescriptionFormatString = "";
                     mDateTimePatternGenerator = null;
                     context.getMainExecutor().execute(() -> {
+                        invalidateClockWidthCache();
                         updateClock(true);
                     });
                 }
@@ -300,6 +313,7 @@ public class Clock extends TextView implements
                         // Force refresh of dependent variables.
                         mContentDescriptionFormatString = "";
                         mDateTimePatternGenerator = null;
+                        invalidateClockWidthCache();
                     }
                 });
             }
@@ -414,7 +428,7 @@ public class Clock extends TextView implements
 
     private void reloadDimens() {
         FontSizeUtils.updateFontSize(this, R.dimen.status_bar_clock_size);
-        mMaxClockWidth = -1;
+        invalidateClockWidthCache();
 
         // Note: The padding for the clock in the shade is controlled by ShadeHeaderController so
         // this just affects the status bar clock.
@@ -447,7 +461,7 @@ public class Clock extends TextView implements
     }
 
     private void updateShowSeconds() {
-        mMaxClockWidth = -1;
+        invalidateClockWidthCache();
         if (mShowSeconds) {
             // Wait until we have a display to start trying to show seconds.
             if (mSecondsHandler == null && getDisplay() != null) {
@@ -472,13 +486,22 @@ public class Clock extends TextView implements
         }
     }
 
+    private void invalidateClockWidthCache() {
+        mMaxClockWidth = -1;
+        mWidestSeconds = null;
+        mLastPrefix = null;
+        mLastSuffix = null;
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (mShowSeconds) {
             int maxWidth = calculateMaxClockWidth();
             if (maxWidth > getMeasuredWidth()) {
-                setMeasuredDimension(maxWidth, getMeasuredHeight());
+                setMeasuredDimension(
+                        resolveSize(maxWidth, widthMeasureSpec),
+                        getMeasuredHeight());
             }
         }
     }
@@ -488,36 +511,82 @@ public class Clock extends TextView implements
         if (TextUtils.isEmpty(text)) {
             return 0;
         }
-        int textLength = text.length();
-        if (mMaxClockWidth > 0 && textLength == mLastTextLength) {
+        int length = text.length();
+        int secondStart = mSecondStart;
+        int secondEnd = mSecondEnd;
+        if (secondStart < 0 || secondEnd <= secondStart || secondEnd > length) {
+            return getMeasuredWidth();
+        }
+
+        TextPaint paint = getPaint();
+        float textSize = paint.getTextSize();
+        Typeface typeface = paint.getTypeface();
+        int compoundPadding = getCompoundPaddingLeft() + getCompoundPaddingRight();
+        if (textSize != mLastTextSize || !Objects.equals(typeface, mLastTypeface)) {
+            mLastTextSize = textSize;
+            mLastTypeface = typeface;
+            invalidateClockWidthCache();
+        }
+        if (compoundPadding != mLastCompoundPadding) {
+            mLastCompoundPadding = compoundPadding;
+            mMaxClockWidth = -1;
+        }
+
+        CharSequence prefix = text.subSequence(0, secondStart);
+        CharSequence suffix = text.subSequence(secondEnd, length);
+        if (mMaxClockWidth > 0
+                && TextUtils.equals(prefix, mLastPrefix)
+                && TextUtils.equals(suffix, mLastSuffix)) {
             return mMaxClockWidth;
         }
 
-        mLastTextLength = textLength;
-        Paint paint = getPaint();
-        char widestDigit = '0';
-        float maxDigitWidth = 0f;
-        for (char c = '0'; c <= '9'; c++) {
-            float w = paint.measureText(String.valueOf(c));
-            if (w > maxDigitWidth) {
-                maxDigitWidth = w;
-                widestDigit = c;
+        mLastPrefix = prefix;
+        mLastSuffix = suffix;
+
+        String widestSeconds = getWidestSeconds(paint);
+        SpannableStringBuilder sb = new SpannableStringBuilder(text);
+        if (secondEnd - secondStart == widestSeconds.length()) {
+            sb.replace(secondStart, secondEnd, widestSeconds);
+        } else {
+            StringBuilder replacement = new StringBuilder(secondEnd - secondStart);
+            for (int i = secondStart; i < secondEnd; i++) {
+                replacement.append(
+                        i == secondEnd - 1 ? widestSeconds.charAt(1) : widestSeconds.charAt(0));
             }
+            sb.replace(secondStart, secondEnd, replacement);
         }
 
-        StringBuilder sb = new StringBuilder(textLength);
-        for (int i = 0; i < textLength; i++) {
-            char c = text.charAt(i);
-            if (c >= '0' && c <= '9') {
-                sb.append(widestDigit);
-            } else {
-                sb.append(c);
-            }
-        }
-
-        mMaxClockWidth = (int) Math.ceil(paint.measureText(sb.toString()))
-                + getCompoundPaddingLeft() + getCompoundPaddingRight();
+        mMaxClockWidth = (int) Math.ceil(Layout.getDesiredWidth(sb, paint)) + compoundPadding;
         return mMaxClockWidth;
+    }
+
+    private String getWidestSeconds(TextPaint paint) {
+        if (mWidestSeconds != null) {
+            return mWidestSeconds;
+        }
+        char zeroDigit = '0';
+        if (mClockFormat != null && mClockFormat.getNumberFormat() instanceof DecimalFormat) {
+            zeroDigit = ((DecimalFormat) mClockFormat.getNumberFormat())
+                    .getDecimalFormatSymbols().getZeroDigit();
+        }
+        char[] pair = new char[2];
+        float maxWidth = -1f;
+        char bestTens = zeroDigit;
+        char bestOnes = zeroDigit;
+        for (int tens = 0; tens <= 5; tens++) {
+            pair[0] = (char) (zeroDigit + tens);
+            for (int ones = 0; ones <= 9; ones++) {
+                pair[1] = (char) (zeroDigit + ones);
+                float w = paint.measureText(pair, 0, 2);
+                if (w > maxWidth) {
+                    maxWidth = w;
+                    bestTens = pair[0];
+                    bestOnes = pair[1];
+                }
+            }
+        }
+        mWidestSeconds = new String(new char[] { bestTens, bestOnes });
+        return mWidestSeconds;
     }
 
     private final CharSequence getSmallTime() {
@@ -572,7 +641,12 @@ public class Clock extends TextView implements
             }
             mClockFormat = new SimpleDateFormat(format);
         }
-        String result = mClockFormat.format(mCalendar.getTime());
+        FieldPosition secondField = new FieldPosition(java.text.DateFormat.Field.SECOND);
+        StringBuffer resultBuffer = new StringBuffer();
+        mClockFormat.format(mCalendar.getTime(), resultBuffer, secondField);
+        String result = resultBuffer.toString();
+        int secondStart = secondField.getBeginIndex();
+        int secondEnd = secondField.getEndIndex();
 
         if (mAmPmStyle != AM_PM_STYLE_NORMAL) {
             int magic1 = result.indexOf(MAGIC1);
@@ -581,6 +655,11 @@ public class Clock extends TextView implements
                 SpannableStringBuilder formatted = new SpannableStringBuilder(result);
                 if (mAmPmStyle == AM_PM_STYLE_GONE) {
                     formatted.delete(magic1, magic2 + 1);
+                    if (magic1 < secondStart) {
+                        int deletedLen = magic2 + 1 - magic1;
+                        secondStart -= deletedLen;
+                        secondEnd -= deletedLen;
+                    }
                 } else {
                     if (mAmPmStyle == AM_PM_STYLE_SMALL) {
                         CharacterStyle style = new RelativeSizeSpan(0.7f);
@@ -589,11 +668,22 @@ public class Clock extends TextView implements
                     }
                     formatted.delete(magic2, magic2 + 1);
                     formatted.delete(magic1, magic1 + 1);
+                    if (magic2 < secondStart) {
+                        secondStart -= 2;
+                        secondEnd -= 2;
+                    } else if (magic1 < secondStart) {
+                        secondStart -= 1;
+                        secondEnd -= 1;
+                    }
                 }
+                mSecondStart = secondStart;
+                mSecondEnd = secondEnd;
                 return formatted;
             }
         }
 
+        mSecondStart = secondStart;
+        mSecondEnd = secondEnd;
         return result;
 
     }
