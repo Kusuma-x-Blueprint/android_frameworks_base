@@ -22,9 +22,9 @@
 
     <!-- SysUI Tuner: Options for how network traffic is displayed [CHAR LIMIT=NONE] -->
     <string-array name="network_traffic_options">
-        <item>Don\'t show this icon (default)</item>
-        <item>Show when there is network traffic</item>
         <item>Always show</item>
+        <item>Show when there is network traffic</item>
+        <item>Don\'t show this icon (default)</item>
     </string-array>
 
     <!-- SysUI Tuner: Clock AM/PM title [CHAR LIMIT=NONE] -->
